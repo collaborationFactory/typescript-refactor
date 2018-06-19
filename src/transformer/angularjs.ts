@@ -1,6 +1,4 @@
 import * as ts from 'typescript';
-import * as helper from './helper';
-import {log} from "util";
 
 export interface AngularDeclaration {
     module: string;
@@ -17,7 +15,7 @@ export interface AngularDeclaration {
  */
 export function isAngularExpression(node: ts.ExpressionStatement): boolean {
     if (node.expression.kind === ts.SyntaxKind.CallExpression) {
-        let identifier = helper.getFirstCallExpressionIdentifier(node.expression);
+        let identifier = getFirstCallExpressionIdentifier(node.expression);
         return identifier === 'angular';
     }
 
@@ -29,7 +27,7 @@ export function isAngularExpression(node: ts.ExpressionStatement): boolean {
  *
  * @param node
  */
-export function getAngularDeclaration(node: ts.CallExpression): AngularDeclaration {
+export function getAngularDeclaration(node: ts.Node): AngularDeclaration {
     return (function recurseChained(expr: ts.Node) {
         if(expr.kind === ts.SyntaxKind.Identifier) {
             return {} as AngularDeclaration;
@@ -55,4 +53,23 @@ export function getAngularDeclaration(node: ts.CallExpression): AngularDeclarati
         }
         return ng;
     })(node);
+}
+
+/**
+ * determines the first identifier of a function call
+ *
+ * the call can be of the form
+ * 1. someMethod(...args) => someMethod
+ * 2. prop.method1().prop2.method2().method3() => prop
+ * 3. any combination of properties and methods but last part should be method call
+ *
+ * @param expr
+ * @returns {string}
+ */
+function getFirstCallExpressionIdentifier(expr: ts.Node): string {
+    // reached end of chain
+    if(expr.kind === ts.SyntaxKind.Identifier) {
+        return (<ts.Identifier>expr).text;
+    }
+    return  getFirstCallExpressionIdentifier((<ts.CallExpression>expr).expression);
 }

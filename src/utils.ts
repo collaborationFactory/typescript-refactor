@@ -1,4 +1,6 @@
 import * as ts from 'typescript';
+import fs = require('fs');
+import {log} from "./index";
 
 export function append(to, value) {
     if (value === undefined)
@@ -32,4 +34,27 @@ export function removeQuotes(value: string) {
         return value.substring(1, value.length - 2);
     }
     return value
+}
+
+export function applyTextChanges(text: string, changes: ts.TextChange[]) {
+    let updatedText = text;
+
+    for (let i = changes.length - 1; i >= 0; i--) {
+        let change = changes[i];
+        let before = updatedText.slice(0, change.span.start);
+        let after = updatedText.slice(change.span.start + change.span.length);
+        updatedText = before + change.newText + after;
+    }
+
+    return updatedText;
+}
+
+
+export function saveFile(fileName, text) {
+    fs.writeFileSync(fileName, text, (err) => {
+        if (err) {
+            log.error('Error writing file ' + fileName, err);
+        }
+    });
+
 }
