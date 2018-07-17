@@ -41,7 +41,7 @@ export function importResolver(fileList: string[], langServ2: ts.LanguageService
         semanticDiagnostics.forEach((diag) => {
             const msg = ts.flattenDiagnosticMessageText(diag.messageText, '\n');
             console.log(msg);
-            let codeFixes = languageService.getCodeFixesAtPosition(fileName, diag.start, diag.length, [diag.code], defaultFormattingOptions);
+            let codeFixes = languageService.getCodeFixesAtPosition(fileName, diag.start, diag.length, [diag.code], defaultFormattingOptions, {});
             codeFixes.forEach((cf) => {
                 console.log(cf.changes[0].textChanges);
                 if(!msgs.has(msg)) {
@@ -54,26 +54,26 @@ export function importResolver(fileList: string[], langServ2: ts.LanguageService
         return applyTextChanges(code, changes);
     }
 
-    function defaultFormattingOptions(): ts.FormatCodeOptions {
+    function defaultFormattingOptions(): ts.FormatCodeSettings {
         return {
-            IndentSize: 4,
-            TabSize: 4,
-            NewLineCharacter: '\n',
-            ConvertTabsToSpaces: true,
-            IndentStyle: ts.IndentStyle.Block,
+            indentSize: 4,
+            tabSize: 4,
+            newLineCharacter: '\n',
+            convertTabsToSpaces: true,
+            indentStyle: ts.IndentStyle.Smart,
 
-            InsertSpaceAfterCommaDelimiter: true,
-            InsertSpaceAfterSemicolonInForStatements: true,
-            InsertSpaceBeforeAndAfterBinaryOperators: true,
-            InsertSpaceAfterConstructor: false,
-            InsertSpaceAfterKeywordsInControlFlowStatements: true,
-            InsertSpaceAfterFunctionKeywordForAnonymousFunctions: true,
-            InsertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis: false,
-            InsertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets: false,
-            InsertSpaceAfterOpeningAndBeforeClosingNonemptyBraces: false,
-            InsertSpaceAfterOpeningAndBeforeClosingTemplateStringBraces: false,
-            PlaceOpenBraceOnNewLineForFunctions: false,
-            PlaceOpenBraceOnNewLineForControlBlocks: false
+            insertSpaceAfterCommaDelimiter: true,
+            insertSpaceAfterSemicolonInForStatements: true,
+            insertSpaceBeforeAndAfterBinaryOperators: true,
+            insertSpaceAfterConstructor: false,
+            insertSpaceAfterKeywordsInControlFlowStatements: true,
+            insertSpaceAfterFunctionKeywordForAnonymousFunctions: true,
+            insertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis: false,
+            insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets: false,
+            insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces: false,
+            insertSpaceAfterOpeningAndBeforeClosingTemplateStringBraces: false,
+            placeOpenBraceOnNewLineForFunctions: false,
+            placeOpenBraceOnNewLineForControlBlocks: false
         }
     }
 

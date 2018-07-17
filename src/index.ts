@@ -11,7 +11,7 @@ export interface RConfig {
 }
 
 (function () {
-    // TODO: remove src from config path´
+    // TODO: remove src from config path
     let argv = process.argv,
         configFile = process.cwd() + '/src/refactor.config',
         configJSON: RConfig = {} as RConfig;

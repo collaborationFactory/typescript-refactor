@@ -54,7 +54,7 @@ export function moduleTransformer(context: ts.TransformationContext) {
      * Should only have a top level module declaration of the form cf.cpalce...
      */
     function visitSourceFile(node: ts.SourceFile) {
-        let statements: ts.Statement[] = ts.visitLexicalEnvironment(node.statements, sourceElementVisitor, context, 0, false);
+        let statements: ts.NodeArray<ts.Statement> = ts.visitLexicalEnvironment(node.statements, sourceElementVisitor, context, 0, false);
         return ts.updateSourceFileNode(node, statements);
     }
 
@@ -189,8 +189,12 @@ export function moduleTransformer(context: ts.TransformationContext) {
                             }
 
                             let propertyDeclaration = ts.createProperty(undefined, [ts.createToken(ts.SyntaxKind.StaticKeyword)], 'CTRL_NAME', undefined, undefined, initExpr);
-                            members.unshift(propertyDeclaration);
-                            return ts.updateClassDeclaration(node, node.decorators, node.modifiers, node.name, node.typeParameters, node.heritageClauses, members);
+                            // members.unshift(propertyDeclaration);
+                            let classElements: ts.ClassElement[] = [];
+                            classElements.push(propertyDeclaration);
+                            classElements = classElements.concat(members);
+
+                            return ts.updateClassDeclaration(node, node.decorators, node.modifiers, node.name, node.typeParameters, node.heritageClauses, classElements);
                         }
                     }
                 }

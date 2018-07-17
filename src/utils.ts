@@ -1,6 +1,8 @@
 import * as ts from 'typescript';
 import fs = require('fs');
-import {log} from "./index";
+import mkdirp = require('mkdirp');
+import {dirname} from 'path';
+
 
 export function append(to, value) {
     if (value === undefined)
@@ -49,12 +51,11 @@ export function applyTextChanges(text: string, changes: ts.TextChange[]) {
     return updatedText;
 }
 
-
 export function saveFile(fileName, text) {
-    fs.writeFileSync(fileName, text, (err) => {
-        if (err) {
-            log.error('Error writing file ' + fileName, err);
-        }
-    });
+    ensureDirExists(dirname(fileName));
+    fs.writeFileSync(fileName, text);
+}
 
+export function ensureDirExists(path: string) {
+    mkdirp.sync(path);
 }

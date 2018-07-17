@@ -4,7 +4,7 @@ import {moduleTransformer} from "./transformer/moduleTransformer";
 import {log, RConfig} from "./index";
 import {fileData, references} from "./model";
 import {importResolver} from "./importResolver";
-import {saveFile} from "./utils";
+import {saveFile, ensureDirExists} from "./utils";
 
 
 export default class RefactorCplaceTS {
@@ -48,7 +48,7 @@ export default class RefactorCplaceTS {
                 const transformed = this.printer.printFile(result.transformed[0]);
                 // console.log(transformed);
 
-                saveFile(fileList[i], transformed);
+                saveFile(this.getRefactoredDirPath(fileList[i], plugin), transformed);
             }
         }
 
@@ -62,6 +62,14 @@ export default class RefactorCplaceTS {
         // this.formatFiles(fileList, languageService);
     }
 
+    getRefactoredDirPath(oldPath, plugin): string {
+        const re = new RegExp('(.+/' + plugin + '/assets/)ts(/.+)');
+        if (re.test(oldPath)) {
+            return oldPath.replace(re, '$1' + RefactorCplaceTS.NEW_TS_NAME + '$2');
+        } else {
+            log.error('Unexpected file path, refactored file might be misplaced', oldPath);
+        }
+    }
 
     configure() {
 
@@ -210,9 +218,7 @@ export default class RefactorCplaceTS {
             config['paths'] = platformPath; 
         }
         let fileName = path + '/' + RefactorCplaceTS.NEW_TS_NAME + '/tsconfig.json';
-        fs.writeFileSync(fileName, JSON.stringify(config, null, 4), (err) => {
-            log.error('error creating config file', fileName)
-        });
+        saveFile(fileName, JSON.stringify(config, null, 4));
     }
 
     testProgram(plugin: string) {
