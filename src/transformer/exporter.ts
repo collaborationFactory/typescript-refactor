@@ -7,7 +7,7 @@ export function addExportToNode(node: ts.Node, sf) {
         if(!modifiers) {
             modifiers = ts.createNodeArray([exportToken]);
         } else {
-            modifiers.unshift(exportToken);
+            modifiers = ts.createNodeArray(modifiers.concat(exportToken));
         }
 
         switch (node.kind) {
