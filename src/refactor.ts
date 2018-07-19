@@ -1,8 +1,10 @@
-import fs = require('fs');
+import * as fs from 'fs';
+import * as path from 'path';
 import * as ts from 'typescript';
 import {moduleTransformer} from './transformer/moduleTransformer';
 import {log, RConfig} from './index';
 import {saveFile} from './utils';
+import {importResolver} from './importResolver';
 
 //TODO: In the final version rename ts folder to ts-old and create new folder with name ts
 export default class RefactorCplaceTS {
@@ -39,6 +41,7 @@ export default class RefactorCplaceTS {
         const pluginPath = this.mainDirectory + '/' + plugin;
         RefactorCplaceTS.createConfigFile(pluginAssetsPath, plugin);
         const fileList = this.getFileList(pluginPath);
+        /*
         for (let i = 0; i < fileList.length; i++) {
             let sourceFile = ts.createSourceFile(fileList[i], fs.readFileSync(fileList[i]).toString(), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
             if (this.shouldRefactor(sourceFile)) {
@@ -49,11 +52,17 @@ export default class RefactorCplaceTS {
                 saveFile(this.getRefactoredDirPath(fileList[i], plugin), transformed);
             }
         }
-
+        */
         const languageService = this.createLanguageService(fileList);
 
         if (this.config.addImports) {
-            // importResolver(fileList, languageService);
+            let refactoredFiles: Array<string> = [];
+            // for (let i = 0; i < fileList.length; i++) {
+            //     refactoredFiles.push(this.getRefactoredDirPath(fileList[i], plugin));
+            // }
+
+            refactoredFiles = this.getFiles(pluginAssetsPath + '/ts-refactored');
+            importResolver(refactoredFiles, languageService, RefactorCplaceTS.getCompilerOptions(plugin));
         }
 
 
@@ -68,6 +77,23 @@ export default class RefactorCplaceTS {
             log.error('Unexpected file path, refactored file might be misplaced', oldPath);
         }
     }
+
+    getFiles(dir, fileList?) {
+        let files = fs.readdirSync(dir);
+        fileList = fileList || [];
+        files.forEach((file) => {
+            if (fs.statSync(path.join(dir, file)).isDirectory()) {
+                fileList = this.getFiles(path.join(dir, file), fileList);
+            }
+            else {
+                let fileName = dir + '/' + file;
+                if (path.extname(fileName) === '.ts') {
+                    fileList.push(fileName);
+                }
+            }
+        });
+        return fileList;
+    };
 
     configure() {
 
@@ -221,6 +247,25 @@ export default class RefactorCplaceTS {
         }
         let fileName = path + '/' + RefactorCplaceTS.NEW_TS_NAME + '/tsconfig.json';
         saveFile(fileName, JSON.stringify(config, null, 4));
+    }
+
+    static getCompilerOptions(pluginName: string) {
+        const paths = {
+            '*': ['../../../cf.cplace.platform/assets/node_modules/@types/*'],
+            '@platform/*': ['../../../cf.cplace.platform/assets/ts-refactored/*']
+        };
+        let compilerOptions = {
+            'baseUrl': '.',
+            'sourceMap': true,
+            'experimentalDecorators': true,
+            'target': ts.ScriptTarget.ES5,
+            'outDir': '../generated_js'
+        };
+        if (pluginName !== 'cf.cplace.platform') {
+            compilerOptions['paths'] = paths;
+        }
+
+        return compilerOptions;
     }
 
     testProgram(plugin: string) {

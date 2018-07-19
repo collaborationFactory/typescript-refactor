@@ -1,10 +1,9 @@
 import * as ts from 'typescript';
-import {applyTextChanges, saveFile} from "./utils";
+import {applyTextChanges} from './utils';
 
 const fs = require('fs');
 
-export function importResolver(fileList: string[], langServ2: ts.LanguageService) {
-    let options = {};
+export function importResolver(fileList: string[], langServ2: ts.LanguageService, compilerOptions: ts.CompilerOptions) {
     const serviceHost: ts.LanguageServiceHost = {
         getScriptFileNames: () => fileList,
         getScriptVersion: (fileName) => '0',
@@ -15,8 +14,9 @@ export function importResolver(fileList: string[], langServ2: ts.LanguageService
 
             return ts.ScriptSnapshot.fromString(fs.readFileSync(fileName).toString());
         },
-        getCurrentDirectory: () => process.cwd(),
-        getCompilationSettings: () => options,
+        // getCurrentDirectory: () => process.cwd(),
+        getCurrentDirectory: () => '/Users/pragatisureka/Documents/test/main/cf.cplace.cp4p.planning/assets/ts-refactored',
+        getCompilationSettings: () => compilerOptions,
         getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
         getNewLine: () => '\n',
         fileExists: ts.sys.fileExists,
@@ -24,12 +24,12 @@ export function importResolver(fileList: string[], langServ2: ts.LanguageService
         readDirectory: ts.sys.readDirectory,
     };
 
-    const langServ = ts.createLanguageService(serviceHost, ts.createDocumentRegistry());
+    const langServ = ts.createLanguageService(serviceHost, ts.createDocumentRegistry(false, '/Users/pragatisureka/Documents/test/main/cf.cplace.cp4p.planning/assets/ts-refactored'));
 
     fileList.forEach((fileName) => {
        console.log('//START ***', fileName, '***');
        let fileData = resolve(langServ, fileName);
-       saveFile(fileName, fileData);
+        // saveFile(fileName, fileData);
        console.log('//END ***', fileName, '***');
     });
 
@@ -40,18 +40,23 @@ export function importResolver(fileList: string[], langServ2: ts.LanguageService
         let msgs: Set<string> = new Set();
         semanticDiagnostics.forEach((diag) => {
             const msg = ts.flattenDiagnosticMessageText(diag.messageText, '\n');
-            console.log(msg);
-            let codeFixes = languageService.getCodeFixesAtPosition(fileName, diag.start, diag.length, [diag.code], defaultFormattingOptions, {});
-            codeFixes.forEach((cf) => {
-                console.log(cf.changes[0].textChanges);
-                if(!msgs.has(msg)) {
-                    msgs.add(msg);
-                    changes = changes.concat(cf.changes[0].textChanges);
-                }
-            });
+            console.log('***********************START DIAG ***********************');
+            console.log(diag);
+            console.log('***********************END DIAG ***********************');
+            let codeFixes = languageService.getCodeFixesAtPosition(fileName, diag.start, diag.length, [diag.code], defaultFormattingOptions(), {});
+            if (codeFixes) {
+                codeFixes.forEach((cf) => {
+                    console.log(cf.changes[0].textChanges);
+                    if (!msgs.has(msg)) {
+                        msgs.add(msg);
+                        changes = changes.concat(cf.changes[0].textChanges);
+                    }
+                });
+            }
+            let code = languageService.getProgram().getSourceFile(fileName).getFullText();
+            return applyTextChanges(code, changes);
         });
-        let code = languageService.getProgram().getSourceFile(fileName).getFullText();
-        return applyTextChanges(code, changes);
+        return null;
     }
 
     function defaultFormattingOptions(): ts.FormatCodeSettings {
