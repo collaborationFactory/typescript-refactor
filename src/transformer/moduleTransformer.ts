@@ -1,15 +1,14 @@
 import * as ts from 'typescript';
 import * as utils from '../utils';
-import {AngularDeclaration, getAngularDeclaration, isAngularExpression} from "./angularjs";
-import {addExportToNode} from "./exporter";
-import {fileData, references} from "../model";
+import {AngularDeclaration, getAngularDeclaration, isAngularExpression} from './angularjs';
+import {addExportToNode} from './exporter';
+import {fileData} from '../model';
 
 export function moduleTransformer(context: ts.TransformationContext) {
     let ngDeclarations: Array<AngularDeclaration>;
     let sf: ts.SourceFile;
     let addExports = context.getCompilerOptions().addExportsToAll;
     let refs: Set<string>;
-    let printer = ts.createPrinter
     return transformModuleDeclaration;
 
 
@@ -24,7 +23,6 @@ export function moduleTransformer(context: ts.TransformationContext) {
 
         sf = sourceFile;
         sourceFile = ts.visitNode(sourceFile, visitSourceFile);
-        console.log(sourceFile);
         ts.forEachChild(sourceFile, findReferences);
 
         fileData.set(sourceFile.fileName, {
@@ -134,7 +132,6 @@ export function moduleTransformer(context: ts.TransformationContext) {
             return recursiveInnerModule || <ts.ModuleDeclaration>moduleDeclaration.body;
         }
     }
-
 
     function refactorModule(node: ts.ModuleDeclaration): Array<ts.Statement> {
         const statements: ts.Statement[] = [];
