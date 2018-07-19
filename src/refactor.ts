@@ -1,12 +1,10 @@
 import fs = require('fs');
 import * as ts from 'typescript';
-import {moduleTransformer} from "./transformer/moduleTransformer";
-import {log, RConfig} from "./index";
-import {fileData, references} from "./model";
-import {importResolver} from "./importResolver";
-import {saveFile, ensureDirExists} from "./utils";
+import {moduleTransformer} from './transformer/moduleTransformer';
+import {log, RConfig} from './index';
+import {saveFile} from './utils';
 
-
+//TODO: In the final version rename ts folder to ts-old and create new folder with name ts
 export default class RefactorCplaceTS {
     static NEW_TS_NAME = 'ts-refactored';
     mainDirectory: string;
@@ -39,7 +37,7 @@ export default class RefactorCplaceTS {
     refactorPlugin(plugin: string) {
         const pluginAssetsPath = this.mainDirectory + '/' + plugin + '/assets';
         const pluginPath = this.mainDirectory + '/' + plugin;
-        this.createConfigFile(pluginAssetsPath, plugin);
+        RefactorCplaceTS.createConfigFile(pluginAssetsPath, plugin);
         const fileList = this.getFileList(pluginPath);
         for (let i = 0; i < fileList.length; i++) {
             let sourceFile = ts.createSourceFile(fileList[i], fs.readFileSync(fileList[i]).toString(), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
@@ -200,22 +198,26 @@ export default class RefactorCplaceTS {
         return ts.createLanguageService(lsh, ts.createDocumentRegistry());
     }
 
-    createConfigFile(path, pluginName) {
-        const platformPath = {
-            "platform/*": ["../../../cf.cplace.platform/assets/ts/*"]
+    static createConfigFile(path, pluginName) {
+        //TODO: rename ts-refactored to ts when everything is ready
+        const paths = {
+            '*': ['../../../cf.cplace.platform/assets/node_modules/@types/*'],
+            '@platform/*': ['../../../cf.cplace.platform/assets/ts-refactored/*']
         };
+
         let config = {
             "compilerOptions": {
+                'baseUrl': '.',
                 "sourceMap": true,
                 "experimentalDecorators": true,
-                "typeRoots": [
-                    "../typings"
-                ]
-            }
+                'target': 'es5',
+                'outDir': '../generated_js'
+            },
+            'include': ['./**/*.ts']
         };
 
         if(pluginName !== 'cf.cplace.platform') {
-            config['paths'] = platformPath; 
+            config.compilerOptions['paths'] = paths;
         }
         let fileName = path + '/' + RefactorCplaceTS.NEW_TS_NAME + '/tsconfig.json';
         saveFile(fileName, JSON.stringify(config, null, 4));
