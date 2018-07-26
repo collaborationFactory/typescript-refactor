@@ -15,7 +15,8 @@ export interface AngularDeclaration {
  */
 export function isAngularExpression(node: ts.ExpressionStatement): boolean {
     if (node.expression.kind === ts.SyntaxKind.CallExpression) {
-        let identifier = getFirstCallExpressionIdentifier(node.expression);
+        let identifier = getFirstCallExpressionIdentifier(<ts.CallExpression>(node.expression));
+        console.log(identifier);
         return identifier === 'angular';
     }
 
@@ -66,10 +67,20 @@ export function getAngularDeclaration(node: ts.Node): AngularDeclaration {
  * @param expr
  * @returns {string}
  */
-function getFirstCallExpressionIdentifier(expr: ts.Node): string {
-    // reached end of chain
+function getFirstCallExpressionIdentifier(expr: ts.CallExpression): string {
+    if (expr.expression.kind === ts.SyntaxKind.PropertyAccessExpression) {
+        let propertyAccessExpression = <ts.PropertyAccessExpression>(expr.expression);
+        if (propertyAccessExpression.expression.kind === ts.SyntaxKind.Identifier) {
+            return "module";
+        } else {
+            return getCallExpressionIdentier(expr);
+        }
+    }
+}
+
+function getCallExpressionIdentier(expr: ts.Node): string {
     if(expr.kind === ts.SyntaxKind.Identifier) {
         return (<ts.Identifier>expr).text;
     }
-    return  getFirstCallExpressionIdentifier((<ts.CallExpression>expr).expression);
+    return getCallExpressionIdentier((<ts.CallExpression>expr).expression);
 }
