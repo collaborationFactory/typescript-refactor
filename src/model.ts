@@ -5,7 +5,7 @@ export interface AngularDeclaration {
     }
 }
 
-interface FileMetaData {
+export interface FileMetaData {
     ngDeclaration: Array<AngularDeclaration>;
     references: Set<string>;
     moduleName: string;
@@ -15,6 +15,10 @@ interface propertyMap {
     filename: string;
     module: string;
 }
+
+export var moduleIdentifier = {
+    name: ''
+};
 
 export let fileData: Map<string, FileMetaData> = new Map();
 
