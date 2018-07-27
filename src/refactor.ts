@@ -5,13 +5,14 @@ import {moduleTransformer} from './transformer/moduleTransformer';
 import {log, RConfig} from './index';
 import {saveFile} from './utils';
 import {importResolver} from './importResolver';
+import {Program} from "./ts/Program";
+import {LSHost} from "./ts/LSHost";
 
 //TODO: In the final version rename ts folder to ts-old and create new folder with name ts
 export default class RefactorCplaceTS {
     static NEW_TS_NAME = 'ts-refactored';
     mainDirectory: string;
     printer: ts.Printer;
-    private lsh: ts.LanguageServiceHost;
 
     /**
      * @param config
@@ -38,35 +39,47 @@ export default class RefactorCplaceTS {
 
     refactorPlugin(plugin: string) {
         const pluginAssetsPath = this.mainDirectory + '/' + plugin + '/assets';
-        const pluginPath = this.mainDirectory + '/' + plugin;
         RefactorCplaceTS.createConfigFile(pluginAssetsPath, plugin);
-        const fileList = this.getFileList(pluginPath);
-        /*
+        const fileList = this.getFileList(pluginAssetsPath);
         for (let i = 0; i < fileList.length; i++) {
             let sourceFile = ts.createSourceFile(fileList[i], fs.readFileSync(fileList[i]).toString(), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
             if (this.shouldRefactor(sourceFile)) {
                 const result = ts.transform(sourceFile, [moduleTransformer], {addExportsToAll: this.config.addExports});
                 const transformed = this.printer.printFile(result.transformed[0]);
                 // console.log(transformed);
-
                 saveFile(this.getRefactoredDirPath(fileList[i], plugin), transformed);
             }
         }
-        */
-        const languageService = this.createLanguageService(fileList);
 
-        if (this.config.addImports) {
-            let refactoredFiles: Array<string> = [];
-            // for (let i = 0; i < fileList.length; i++) {
-            //     refactoredFiles.push(this.getRefactoredDirPath(fileList[i], plugin));
-            // }
+        let program: Program = new Program(new LSHost(pluginAssetsPath + '/' + RefactorCplaceTS.NEW_TS_NAME));
 
-            refactoredFiles = this.getFiles(pluginAssetsPath + '/ts-refactored');
-            importResolver(refactoredFiles, languageService, RefactorCplaceTS.getCompilerOptions(plugin));
-        }
 
+
+        // if (this.config.addImports) {
+        //     let refactoredFiles: Array<string> = [];
+        //     // for (let i = 0; i < fileList.length; i++) {
+        //     //     refactoredFiles.push(this.getRefactoredDirPath(fileList[i], plugin));
+        //     // }
+        //
+        //     refactoredFiles = this.getFiles(pluginAssetsPath + '/ts-refactored');
+        //     importResolver(refactoredFiles, null, RefactorCplaceTS.getCompilerOptions(plugin));
+        //     // this.testImportResolver(refactoredFiles, plugin);
+        // }
 
         // this.formatFiles(fileList, languageService);
+    }
+
+    testImportResolver(refactoredFiles: Array<string>, plugin: string) {
+        let readConfigFile = ts.readConfigFile('/Users/pragatisureka/Documents/test/main/cf.cplace.cp4p.planning/assets/ts-refactored/tsconfig.json', ts.sys.readFile);
+        console.log(readConfigFile);
+        const parsedCommandLine = ts.parseJsonConfigFileContent(readConfigFile.config, {
+            useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames,
+            readDirectory: ts.sys.readDirectory,
+            readFile: ts.sys.readFile,
+            fileExists: ts.sys.fileExists
+        }, '/Users/pragatisureka/Documents/test/main/cf.cplace.cp4p.planning/assets/ts-refactored');
+
+        console.log(parsedCommandLine);
     }
 
     getRefactoredDirPath(oldPath, plugin): string {
@@ -192,13 +205,13 @@ export default class RefactorCplaceTS {
     }
 
     getFileList(pluginPath: string) {
-        let data = fs.readFileSync(pluginPath + '/assets/ts/tscommand.txt', 'utf8');
+        let data = fs.readFileSync(pluginPath + '/ts/tscommand.txt', 'utf8');
         return data.split('\n').filter((val) => {
             val = val.trim();
             return (val && val.endsWith('.ts'));
         })
             .map((val) => {
-                return pluginPath + '/assets/' + val;
+                return pluginPath + '/' + val;
             });
     }
 

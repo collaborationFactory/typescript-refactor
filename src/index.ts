@@ -94,7 +94,7 @@ export interface RConfig {
     //     configJSON.plugins = [currentDir];
     // }
 
-    configJSON.plugins = ['cf.cplace.cp4p.planning'];
+    configJSON.plugins = ['cf.cplace.board'];
     configJSON.addExports = true;
     configJSON.addImports = true;
     new Refactor(configJSON);
@@ -104,7 +104,6 @@ export interface RConfig {
     //     let fileList = getFileList(tsCommand);
     //     console.log(fileList);
     // }
-
 })();
 
 

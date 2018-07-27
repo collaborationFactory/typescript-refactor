@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-import {applyTextChanges} from './utils';
+import {applyTextChanges, saveFile} from './utils';
 
 const fs = require('fs');
 
@@ -14,7 +14,7 @@ export function importResolver(fileList: string[], langServ2: ts.LanguageService
 
             return ts.ScriptSnapshot.fromString(fs.readFileSync(fileName).toString());
         },
-        // getCurrentDirectory: () => process.cwd(),
+        // getCurrentDirectory: () => '',
         getCurrentDirectory: () => '/Users/pragatisureka/Documents/test/main/cf.cplace.cp4p.planning/assets/ts-refactored',
         getCompilationSettings: () => compilerOptions,
         getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
@@ -24,11 +24,13 @@ export function importResolver(fileList: string[], langServ2: ts.LanguageService
         readDirectory: ts.sys.readDirectory,
     };
 
-    const langServ = ts.createLanguageService(serviceHost, ts.createDocumentRegistry(false, '/Users/pragatisureka/Documents/test/main/cf.cplace.cp4p.planning/assets/ts-refactored'));
+    const langServ = ts.createLanguageService(serviceHost, ts.createDocumentRegistry());
 
     fileList.forEach((fileName) => {
        console.log('//START ***', fileName, '***');
        let fileData = resolve(langServ, fileName);
+
+       console.log(fileData);
         // saveFile(fileName, fileData);
        console.log('//END ***', fileName, '***');
     });
@@ -40,13 +42,14 @@ export function importResolver(fileList: string[], langServ2: ts.LanguageService
         let msgs: Set<string> = new Set();
         semanticDiagnostics.forEach((diag) => {
             const msg = ts.flattenDiagnosticMessageText(diag.messageText, '\n');
-            console.log('***********************START DIAG ***********************');
-            console.log(diag);
-            console.log('***********************END DIAG ***********************');
-            let codeFixes = languageService.getCodeFixesAtPosition(fileName, diag.start, diag.length, [diag.code], defaultFormattingOptions(), {});
-            if (codeFixes) {
-                codeFixes.forEach((cf) => {
-                    console.log(cf.changes[0].textChanges);
+            // console.log('***********************START DIAG ***********************');
+            // console.log(diag);
+            // console.log('***********************END DIAG ***********************');
+            let codeFixesActions = languageService.getCodeFixesAtPosition(fileName, diag.start, diag.start + diag.length, [diag.code], defaultFormattingOptions(), {});
+            console.log(codeFixesActions);
+            if (codeFixesActions.length) {
+                codeFixesActions.forEach((cf) => {
+                    // console.log(cf.changes[0]);
                     if (!msgs.has(msg)) {
                         msgs.add(msg);
                         changes = changes.concat(cf.changes[0].textChanges);
@@ -56,6 +59,7 @@ export function importResolver(fileList: string[], langServ2: ts.LanguageService
             let code = languageService.getProgram().getSourceFile(fileName).getFullText();
             return applyTextChanges(code, changes);
         });
+        console.log(msgs);
         return null;
     }
 
