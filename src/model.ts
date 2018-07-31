@@ -16,9 +16,11 @@ interface propertyMap {
     module: string;
 }
 
-export var moduleIdentifier = {
+export let moduleIdentifier = {
     name: ''
 };
+
+export let platformModuleNames: Set<string> = new Set<string>();
 
 export let fileData: Map<string, FileMetaData> = new Map();
 
