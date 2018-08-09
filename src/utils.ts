@@ -1,7 +1,7 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import * as ts from 'typescript';
-import fs = require('fs');
-import mkdirp = require('mkdirp');
-import {dirname} from 'path';
+import * as mkdirp from 'mkdirp';
 
 
 export function append(to, value) {
@@ -28,11 +28,11 @@ export function moveRangePos(range: ts.TextRange, pos: number): ts.TextRange {
 }
 
 export function createRange(pos: number, end: number): ts.TextRange {
-    return { pos, end };
+    return {pos, end};
 }
 
 export function removeQuotes(value: string) {
-    if(value.startsWith('"') || value.startsWith("'")) {
+    if (value.startsWith('"') || value.startsWith('\'')) {
         return value.substring(1, value.length - 2);
     }
     return value
@@ -52,10 +52,47 @@ export function applyTextChanges(text: string, changes: ts.TextChange[]) {
 }
 
 export function saveFile(fileName, text) {
-    ensureDirExists(dirname(fileName));
+    ensureDirExists(path.dirname(fileName));
     fs.writeFileSync(fileName, text);
 }
 
 export function ensureDirExists(path: string) {
     mkdirp.sync(path);
+}
+
+export function getRelativeImportPath() {
+
+}
+
+
+function copyFileSync(source: string, target: string) {
+    let targetFile = target;
+    //if target is a directory a new file with the same name will be created
+    if (fs.existsSync(target)) {
+        if (fs.lstatSync(target).isDirectory()) {
+            targetFile = path.join(target, path.basename(source));
+        }
+    }
+
+    fs.writeFileSync(targetFile, fs.readFileSync(source));
+}
+
+export function copyFolderRecursiveSync(source: string, target: string) {
+    let files = [];
+    const targetFolder = path.join(target, path.basename(source));
+    if (!fs.existsSync(targetFolder)) {
+        fs.mkdirSync(targetFolder);
+    }
+
+    if (fs.lstatSync(source).isDirectory()) {
+        files = fs.readdirSync(source);
+        files.forEach(function (file) {
+            const curSource = path.join(source, file);
+            if (fs.lstatSync(curSource).isDirectory()) {
+                copyFolderRecursiveSync(curSource, targetFolder);
+            } else {
+                copyFileSync(curSource, targetFolder);
+            }
+        });
+    }
 }

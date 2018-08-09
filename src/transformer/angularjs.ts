@@ -1,12 +1,6 @@
 import * as ts from 'typescript';
-import {moduleIdentifier} from "../model";
+import {AngularDeclaration, moduleIdentifier} from '../model';
 
-export interface AngularDeclaration {
-    module: string;
-    types: {
-        [type: string]: Array<string>;
-    }
-}
 /**
  * angular expression should always start with
  * angular.module
@@ -78,10 +72,10 @@ export function getFirstCallExpressionIdentifier(expr: ts.CallExpression): strin
             let expressionIdentifier = <ts.Identifier>(propertyAccessExpression.expression);
             let nameIdentifier = <ts.Identifier>(propertyAccessExpression.name);
             if (expressionIdentifier.text === 'angular' && nameIdentifier.text === 'module') {
-                return "angular.module";
+                return 'angular.module';
             }
             if (expressionIdentifier.text === moduleIdentifier.name) {
-                return "angular";
+                return 'angular';
             }
         } else {
             return getFirstCallExpressionIdentifier(<ts.CallExpression>(propertyAccessExpression.expression));
