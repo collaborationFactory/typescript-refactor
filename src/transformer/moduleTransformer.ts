@@ -1,8 +1,8 @@
 import * as ts from 'typescript';
 import * as utils from '../utils';
-import {AngularDeclaration, getAngularDeclaration, isAngularExpression} from './angularjs';
+import {getAngularDeclaration, isAngularExpression} from './angularjs';
 import {addExportToNode} from './exporter';
-import {fileData} from '../model';
+import {AngularDeclaration, fileData} from '../model';
 
 export function moduleTransformer(context: ts.TransformationContext) {
     let ngDeclarations: Array<AngularDeclaration>;

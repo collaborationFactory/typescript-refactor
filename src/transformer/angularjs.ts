@@ -1,11 +1,6 @@
 import * as ts from 'typescript';
+import {AngularDeclaration} from '../model';
 
-export interface AngularDeclaration {
-    module: string;
-    types: {
-        [type: string]: Array<string>;
-    }
-}
 /**
  * angular expression should always start with
  * angular.module

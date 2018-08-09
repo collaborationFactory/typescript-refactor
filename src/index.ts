@@ -1,20 +1,14 @@
-import Refactor from "./refactor";
-const fs = require('fs');
-export const log = require('simple-node-logger').createSimpleLogger();
+import Refactor from './refactor';
+import * as fs from 'fs';
+import {detectAndGenerateConfig} from './config';
 
-export interface RConfig {
-    verbose?: boolean;
-    plugins?: Array<string>;
-    createModuleFiles?: boolean;
-    addImports?: boolean;
-    addExports?: boolean;
-}
+export const log = require('simple-node-logger').createSimpleLogger();
 
 (function () {
     // TODO: remove src from config path
     let argv = process.argv,
         configFile = process.cwd() + '/src/refactor.config',
-        configJSON: RConfig = {} as RConfig;
+        configJSON: any = {};
 
 
     if (argv[2] === '--help' || argv[2] === '?') {
@@ -22,9 +16,9 @@ export interface RConfig {
         console.log('Available options:');
         console.log('   -verbose', '     Verbose logging');
         console.log('   -config /path/to/refactor.config', '     Absolute or relative path of config file. If absent, config file will be searched for in current directory.');
-        console.log('   -createModuleFiles ', '     Creates a file that defines angular module and all related functions(directives, controllers, ...)');
-        console.log('   -addImports', '     Try to resolve reference error and add import statements if possible');
-        console.log('   -addExports', '     Add export keyword to all top level functions, classes and interfaces of a refactored file');
+        console.log('   -noModuleFiles ', '     Creates a file that defines angular module and all related functions(directives, controllers, ...)');
+        console.log('   -noImports', '     Do not try to resolve reference error and add import statements if possible');
+        console.log('   -noExports', '     Do not add export keyword to all top level functions, classes and interfaces of a refactored file');
         console.log('   -plugins cf.cplace.cp4p.planning,cf.cplace.training.extended', '     List of plugins to refactor');
 
         return;
@@ -43,8 +37,8 @@ export interface RConfig {
         configJSON = {
             verbose: false,
             plugins: [],
-            createModuleFiles: false,
-            addImports: false,
+            createModuleFiles: true,
+            addImports: true,
             addExports: true
         };
     }
@@ -59,14 +53,14 @@ export interface RConfig {
                 configJSON.plugins = plugins;
                 i++;
                 break;
-            case '-createModuleFiles':
-                configJSON.createModuleFiles = true;
+            case '-noModuleFiles':
+                configJSON.createModuleFiles = false;
                 break;
-            case '-addImports':
-                configJSON.addImports = true;
+            case '-noImports':
+                configJSON.addImports = false;
                 break;
-            case '-addExports':
-                configJSON.addExports = true;
+            case '-noExports':
+                configJSON.addExports = false;
                 break;
             default:
                 log.warn('Unrecognised configuration flag ', argv[i], ' ...skipping');
@@ -97,13 +91,10 @@ export interface RConfig {
     configJSON.plugins = ['cf.cplace.cp4p.planning'];
     configJSON.addExports = true;
     configJSON.addImports = true;
-    new Refactor(configJSON);
 
-    // for(let i = 0; i < configJSON.plugins.length; i++) {
-    //     let tsCommand = mainDirectory + '/' + configJSON.plugins[i] + '/assets/ts/tscommand.txt';
-    //     let fileList = getFileList(tsCommand);
-    //     console.log(fileList);
-    // }
+    detectAndGenerateConfig(configJSON);
+
+    new Refactor();
 
 })();
 
