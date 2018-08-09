@@ -5,6 +5,16 @@ export interface AngularDeclaration {
     }
 }
 
+export interface AngularDeclaration2 {
+    module: string;
+    types: {
+        [type: string]: Array<{
+            name: string;
+            function: string;
+        }>;
+    }
+}
+
 interface FileMetaData {
     ngDeclaration: Array<AngularDeclaration>;
     references: Set<string>;
