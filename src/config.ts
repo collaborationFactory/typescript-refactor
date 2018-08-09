@@ -59,6 +59,8 @@ export function detectAndGenerateConfig(commandLineOptions: any) {
     } else {
         config.plugins = getPluginInRepo(currentDir);
     }
+
+    return config;
 }
 
 function getPluginInRepo(repoPath: string): string[] {

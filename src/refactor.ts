@@ -19,6 +19,7 @@ export default class RefactorCplaceTS {
 
     start() {
         const platformTsPath = path.join(config.platformPath, 'assets', 'ts');
+        // We consider a plugin to be refactored if there is tsconfig.json present in assets/ts folder
         const isPlatformRefactored = fs.existsSync(path.join(platformTsPath, 'tsconfig.json'));
         if (config.isSubRepo && !isPlatformRefactored) {
             log.fatal('Before refactoring sub-repos make sure that at least platform plugin in main repo is already refactored');
@@ -44,9 +45,6 @@ export default class RefactorCplaceTS {
         }
     }
 
-    /**
-     * We consider a plugin to be refactored if there is tsconfig.json present in assets/ts folder
-     */
     typesAreInstalled(): boolean {
         // we can add more checks to be 100% sure
         return fs.existsSync(path.join(config.platformPath, 'assets', 'node_modules', '@types', 'angular', 'index.d.ts'));
