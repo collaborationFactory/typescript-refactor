@@ -1,8 +1,13 @@
 import * as ts from 'typescript';
 import * as utils from '../utils';
-import {getAngularDeclaration, isAngularExpression} from './angularjs';
+import {
+    getAngularDeclaration,
+    getFirstCallExpressionIdentifier,
+    isAngularExpressionButNotModuleDeclaration
+} from './angularjs';
 import {addExportToNode} from './exporter';
-import {AngularDeclaration, fileData} from '../model';
+import {AngularDeclaration, fileData, moduleIdentifier} from '../model';
+import {metaData} from '../metaData';
 
 export function moduleTransformer(context: ts.TransformationContext) {
     let ngDeclarations: Array<AngularDeclaration>;
@@ -19,18 +24,20 @@ export function moduleTransformer(context: ts.TransformationContext) {
         ngDeclarations = [];
         refs = new Set();
         console.log('processing file', sourceFile.fileName);
-        // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, sourceFile, sourceFile));
 
         sf = sourceFile;
         sourceFile = ts.visitNode(sourceFile, visitSourceFile);
         ts.forEachChild(sourceFile, findReferences);
+
+        ngDeclarations.forEach(dec => {
+            metaData.addNgDeclaration(dec.module, dec.declarations);
+        });
 
         fileData.set(sourceFile.fileName, {
             ngDeclaration: ngDeclarations,
             references: refs,
             moduleName: ''
         });
-
 
         return sourceFile;
     }
@@ -45,7 +52,6 @@ export function moduleTransformer(context: ts.TransformationContext) {
         } else {
             ts.forEachChild(node, findReferences);
         }
-
     }
 
     /**
@@ -86,10 +92,31 @@ export function moduleTransformer(context: ts.TransformationContext) {
         return node;
     }
 
+    function checkIfAngularModuleDeclaration(node: ts.Node) {
+        if (node.kind === ts.SyntaxKind.VariableStatement) {
+            let variableStatementNode = <ts.VariableStatement>node;
+            let variableDeclaration = variableStatementNode.declarationList.declarations[0];
+            let initializer = variableDeclaration.initializer;
+            if (initializer.kind === ts.SyntaxKind.CallExpression) {
+                let callExpression = ts.createExpressionStatement(initializer);
+                if ('angular.module' === getFirstCallExpressionIdentifier(<ts.CallExpression>(callExpression.expression))) {
+                    metaData.addNgModuleIdentifier(variableDeclaration.name.getText(), (<ts.CallExpression>initializer).arguments[0].getText());
+                    moduleIdentifier.name = variableDeclaration.name.getText();
+                    const dec = getAngularDeclaration(callExpression, moduleIdentifier.name);
+                    // metaData.addNgDeclaration(dec.module, dec.declarations);
+                    ngDeclarations.push(dec);
+                }
+            }
+        }
+    }
+
     function extractAndRemoveAngularDeclarations(node: ts.Node) {
+        checkIfAngularModuleDeclaration(node);
         if (node.kind === ts.SyntaxKind.ExpressionStatement) {
-            if (isAngularExpression(<ts.ExpressionStatement>node)) {
-                ngDeclarations.push(getAngularDeclaration((<ts.ExpressionStatement>node).expression as ts.CallExpression));
+            if (isAngularExpressionButNotModuleDeclaration(<ts.ExpressionStatement>node)) {
+                const dec = getAngularDeclaration((<ts.ExpressionStatement>node).expression as ts.CallExpression, moduleIdentifier.name);
+                // metaData.addNgDeclaration(dec.module, dec.declarations);
+                ngDeclarations.push(dec);
                 return undefined;
             }
         }
@@ -136,7 +163,6 @@ export function moduleTransformer(context: ts.TransformationContext) {
     function refactorModule(node: ts.ModuleDeclaration): Array<ts.Statement> {
         const statements: ts.Statement[] = [];
         context.startLexicalEnvironment();
-        // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, node, sf));
 
         let moduleBlock: ts.ModuleBlock;
         if (node.body.kind === ts.SyntaxKind.ModuleBlock) {
@@ -145,7 +171,6 @@ export function moduleTransformer(context: ts.TransformationContext) {
             let moduleDec = getInnerMostModuleDeclarationFromDottedModule(node);
             moduleBlock = <ts.ModuleBlock>moduleDec.body;
         }
-        // console.log(ts.createPrinter().printNode(ts.EmitHint.Unspecified, moduleBlock, sf));
         moduleBlock = ts.visitEachChild(moduleBlock, extractAndRemoveAngularDeclarations, context);
         moduleBlock = ts.visitEachChild(moduleBlock, visitDirectChildOfModule, context);
 
@@ -170,28 +195,27 @@ export function moduleTransformer(context: ts.TransformationContext) {
             // check if static member CTRL_NAME needs to be added
             for (let i = 0; i < ngDeclarations.length; i++) {
                 let ngDeclaration = ngDeclarations[i];
-                if (ngDeclaration.types.controller) {
-                    if (ngDeclaration.types.controller[1] === node.name.text) {
-                        // angular controller declaration is using string value
-                        if (ngDeclaration.types.controller[0].startsWith("'")
-                            || ngDeclaration.types.controller[0].endsWith("'")
-                            || ngDeclaration.types.controller[0].startsWith('"')
-                            || ngDeclaration.types.controller[0].endsWith('"')) {
-                            let members = node.members;
-                            let initExpr;
-                            if (!ngDeclaration.types.controller[0].startsWith("'") || !ngDeclaration.types.controller[0].startsWith('"')) {
-                                initExpr = ts.createIdentifier(ngDeclaration.types.controller[0]);
-                            } else {
-                                initExpr = ts.createLiteral(ngDeclaration.types.controller[0]);
+                if (ngDeclaration.declarations.controller) {
+                    for (let controller of ngDeclaration.declarations.controller) {
+                        if (controller.function === node.name.text) {
+                            // angular controller declaration is using string value
+                            if (controller.name.startsWith('\'') || controller.name.endsWith('\'')
+                                || controller.name.startsWith('"') || controller.name.endsWith('"')) {
+                                let members = node.members;
+                                let initExpr;
+                                if (!controller.name.startsWith('\'') || !controller.name.startsWith('"')) {
+                                    initExpr = ts.createIdentifier(controller.name);
+                                } else {
+                                    initExpr = ts.createLiteral(controller.name);
+                                }
+
+                                let propertyDeclaration = ts.createProperty(undefined, [ts.createToken(ts.SyntaxKind.StaticKeyword)], 'CTRL_NAME', undefined, undefined, initExpr);
+                                let classElements: ts.ClassElement[] = [];
+                                classElements.push(propertyDeclaration);
+                                classElements = classElements.concat(members);
+
+                                return ts.updateClassDeclaration(node, node.decorators, node.modifiers, node.name, node.typeParameters, node.heritageClauses, classElements);
                             }
-
-                            let propertyDeclaration = ts.createProperty(undefined, [ts.createToken(ts.SyntaxKind.StaticKeyword)], 'CTRL_NAME', undefined, undefined, initExpr);
-                            // members.unshift(propertyDeclaration);
-                            let classElements: ts.ClassElement[] = [];
-                            classElements.push(propertyDeclaration);
-                            classElements = classElements.concat(members);
-
-                            return ts.updateClassDeclaration(node, node.decorators, node.modifiers, node.name, node.typeParameters, node.heritageClauses, classElements);
                         }
                     }
                 }

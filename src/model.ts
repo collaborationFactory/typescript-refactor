@@ -1,18 +1,13 @@
 export interface AngularDeclaration {
     module: string;
-    types: {
-        [type: string]: Array<string>;
-    }
+    declarations: NgDeclarations;
 }
 
-export interface AngularDeclaration2 {
-    module: string;
-    types: {
-        [type: string]: Array<{
-            name: string;
-            function: string;
-        }>;
-    }
+export interface NgDeclarations {
+    [type: string]: Array<{
+        name: string;
+        function: string;
+    }>;
 }
 
 interface FileMetaData {
@@ -26,11 +21,29 @@ interface propertyMap {
     module: string;
 }
 
+
+export let moduleIdentifier = {
+    name: ''
+};
+
+/**
+ * A map of variable identifiers to angular module name
+ *
+ * let MODULE = angular.module('my.module', []);
+ *
+ * Then map will contain
+ *  {
+ *      MODULE: 'my.module'
+ *  }
+ *
+ */
+export let ngModuleIdentifier: { [identifier: string]: string } = {};
+
+export let platformModuleNames: Set<string> = new Set<string>();
+
 export let fileData: Map<string, FileMetaData> = new Map();
 
 export let references: Map<string, Set<string>> = new Map();
-
-export let _modules: Set<string> = new Set();
 
 export interface IFileData {
     data: string;
