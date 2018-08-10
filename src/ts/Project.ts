@@ -44,7 +44,7 @@ export class Project {
     }
 
     getProjectFiles() {
-        return this.host.getOrigialFileNames()
+        return this.host.getOriginalFileNames()
     }
 
     getCodeFixes(fileName: string, diagnostic: ts.Diagnostic) {
@@ -59,11 +59,14 @@ export class Project {
         return this.service.getProgram().getSourceFile(fileName)
     }
 
-    updateSourceFile(fileName: string, snapshot: ts.IScriptSnapshot) {
-        let version = parseInt(this.host.getScriptVersion(fileName)) + 1;
-        const newVersion = version.toString();
-        this.documentRegistry.updateDocument(fileName, this.host.getCompilationSettings(), snapshot, newVersion);
-        this.host.fileVersions.set(fileName, newVersion);
+    updateSourceFile(fileName: string, text: string) {
+        const snapshot = ts.ScriptSnapshot.fromString(text);
+        let version = this.host.files[fileName].version + 1;
+        this.host.files[fileName] = {
+            version: version,
+            snapshot: snapshot
+        };
+        this.documentRegistry.updateDocument(fileName, this.host.getCompilationSettings(), snapshot, String(version));
     }
 
     getCurrentContents(fileName: string) {
@@ -91,7 +94,7 @@ export class Project {
         projectFiles.forEach(file => {
             const formattingEdits = this.service.getFormattingEditsForDocument(file, Project.DEFAULT_FORMATTING_OPTIONS);
             const text = applyTextChanges(this.getCurrentContents(file), formattingEdits);
-            this.updateSourceFile(file, ts.ScriptSnapshot.fromString(text))
+            this.updateSourceFile(file, text);
         });
     }
 

@@ -4,8 +4,12 @@ import * as ts from 'typescript';
 export class LSHost implements ts.LanguageServiceHost {
 
     parsedConfig: ts.ParsedCommandLine;
-
-    fileVersions = new Map<string, string>();
+    files: {
+        [name: string]: {
+            version: number;
+            snapshot: ts.IScriptSnapshot
+        }
+    } = {};
 
     /**
      * Requires path of the typescript project. Provided folder should contain tsconfig.json
@@ -31,22 +35,31 @@ export class LSHost implements ts.LanguageServiceHost {
         return files.concat(this.parsedConfig.fileNames);
     }
 
-    getOrigialFileNames() {
+    getOriginalFileNames() {
         return this.parsedConfig.fileNames;
     }
 
     getScriptVersion(fileName: string) {
-        if (!this.fileVersions.has(fileName)) {
-            this.fileVersions.set(fileName, '0');
+        if (this.files[fileName]) {
+            return String(this.files[fileName].version);
         }
-        return this.fileVersions.get(fileName);
+
+        return '0';
     }
 
     getScriptSnapshot(fileName: string) {
-        if (!ts.sys.fileExists(fileName)) {
-            return undefined;
+        if (this.files[fileName]) {
+            return this.files[fileName].snapshot;
+        } else {
+            const text = ts.sys.readFile(fileName);
+
+            this.files[fileName] = {
+                version: 0,
+                snapshot: typeof text === 'string' ? ts.ScriptSnapshot.fromString(text) : undefined
+            };
         }
-        return ts.ScriptSnapshot.fromString(ts.sys.readFile(fileName).toString());
+
+        return this.files[fileName].snapshot;
     }
 
     getCurrentDirectory() {

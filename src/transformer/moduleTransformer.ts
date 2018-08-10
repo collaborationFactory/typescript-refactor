@@ -6,7 +6,7 @@ import {
     isAngularExpressionButNotModuleDeclaration
 } from './angularjs';
 import {addExportToNode} from './exporter';
-import {AngularDeclaration, fileData, moduleIdentifier} from '../model';
+import {AngularDeclaration, moduleIdentifier} from '../model';
 import {metaData} from '../metaData';
 
 export function moduleTransformer(context: ts.TransformationContext) {
@@ -14,6 +14,7 @@ export function moduleTransformer(context: ts.TransformationContext) {
     let sf: ts.SourceFile;
     let addExports = context.getCompilerOptions().addExportsToAll;
     let refs: Set<string>;
+    let ngRefs: Set<string>;
     return transformModuleDeclaration;
 
 
@@ -22,7 +23,8 @@ export function moduleTransformer(context: ts.TransformationContext) {
             return sourceFile;
         }
         ngDeclarations = [];
-        refs = new Set();
+        refs = new Set<string>();
+        ngRefs = new Set<string>();
         console.log('processing file', sourceFile.fileName);
 
         sf = sourceFile;
@@ -31,12 +33,6 @@ export function moduleTransformer(context: ts.TransformationContext) {
 
         ngDeclarations.forEach(dec => {
             metaData.addNgDeclaration(dec.module, dec.declarations);
-        });
-
-        fileData.set(sourceFile.fileName, {
-            ngDeclaration: ngDeclarations,
-            references: refs,
-            moduleName: ''
         });
 
         return sourceFile;
@@ -59,7 +55,27 @@ export function moduleTransformer(context: ts.TransformationContext) {
      */
     function visitSourceFile(node: ts.SourceFile) {
         let statements: ts.NodeArray<ts.Statement> = ts.visitLexicalEnvironment(node.statements, sourceElementVisitor, context, 0, false);
+        const statement = createAngularImportStatement();
+
+        if (statement) {
+            statements = ts.createNodeArray([statement].concat(statements));
+        }
         return ts.updateSourceFileNode(node, statements);
+    }
+
+    function createAngularImportStatement(): ts.Statement {
+        if (ngRefs.size == 0) {
+            return null;
+        }
+        let importSpecifiers: Array<ts.ImportSpecifier> = [];
+        for (let ngRef of ngRefs) {
+            const importSpecifier = ts.createImportSpecifier(undefined,
+                ts.createIdentifier(ngRef));
+            importSpecifiers.push(importSpecifier);
+        }
+        const importClause = ts.createImportClause(undefined, ts.createNamedImports(importSpecifiers));
+        return ts.createImportDeclaration(undefined, undefined, importClause, ts.createStringLiteral('angular'));
+
     }
 
     function sourceElementVisitor(node: ts.Node): ts.VisitResult<ts.Node> {
@@ -134,7 +150,6 @@ export function moduleTransformer(context: ts.TransformationContext) {
         return node;
     }
 
-
     /**
      *
      * In typescript module declaration of the form
@@ -173,12 +188,47 @@ export function moduleTransformer(context: ts.TransformationContext) {
         }
         moduleBlock = ts.visitEachChild(moduleBlock, extractAndRemoveAngularDeclarations, context);
         moduleBlock = ts.visitEachChild(moduleBlock, visitDirectChildOfModule, context);
+        moduleBlock = ts.visitEachChild(moduleBlock, checkAndReplaceReferences, context);
 
         utils.addRange(statements, moduleBlock.statements);
         let endLexicalEnvironment = context.endLexicalEnvironment();
         utils.addRange(statements, endLexicalEnvironment);
 
         return statements;
+    }
+
+    /**
+     * This method will replace platform and angular references
+     *
+     * angular references - ng.IScope => IScope
+     * platform references - cf.cplace.platform.widgetLayout.WidgetCtrl => WidgetCtrl
+     *
+     * @param node
+     */
+    function checkAndReplaceReferences(node: ts.Node): ts.VisitResult<ts.Node> {
+        if (node.kind === ts.SyntaxKind.TypeReference || node.kind === ts.SyntaxKind.PropertyAccessExpression) {
+            let qualifiedName = node.getText();
+            // all angular interfaces/types are prefixed with 'I' and we use them as 'ng.IScope'
+            // we also make sure that we only replace type references
+            if (qualifiedName.startsWith('ng.I') && node.kind === ts.SyntaxKind.TypeReference) {
+                qualifiedName = qualifiedName.replace('ng.', '');
+                ngRefs.add(qualifiedName);
+                let qualifiedNameIdentifier = ts.createIdentifier(qualifiedName);
+                return ts.updateTypeReferenceNode(<ts.TypeReferenceNode>node, qualifiedNameIdentifier, undefined);
+            } else if (qualifiedName.startsWith('cf.cplace.platform')) {
+                qualifiedName = qualifiedName.replace('cf.cplace.platform.', '');
+                let qualifiedNameIdentifier = ts.createIdentifier(qualifiedName);
+                if (node.kind === ts.SyntaxKind.TypeReference) {
+                    return ts.updateTypeReferenceNode(<ts.TypeReferenceNode>node, qualifiedNameIdentifier, undefined);
+                }
+                if (node.kind === ts.SyntaxKind.PropertyAccessExpression) {
+                    return ts.createIdentifier(qualifiedName);
+                }
+            }
+        } else {
+            return ts.visitEachChild(node, checkAndReplaceReferences, context);
+        }
+        return node;
     }
 
     function isUseStrict(node: ts.ExpressionStatement): boolean {
