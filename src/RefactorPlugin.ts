@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import * as path from 'path';
 import * as ts from 'typescript';
 import {moduleTransformer} from './transformer/moduleTransformer';
@@ -7,6 +6,7 @@ import {IFileData} from './model';
 import {applyTextChanges, copyFolderRecursiveSync, ensureDirExists, saveFile} from './utils';
 import {Project} from './ts/Project';
 import {LSHost} from './ts/LSHost';
+import {initMetaData} from './metaData';
 
 export default class RefactorPlugin {
     private readonly tsPath: string;
@@ -21,6 +21,7 @@ export default class RefactorPlugin {
             removeComments: false,
         });
 
+        initMetaData(plugin);
         // this.files = this.getFiles();
     }
 
@@ -34,13 +35,9 @@ export default class RefactorPlugin {
 
         let additionalFiles = this.platformProject ? this.platformProject.getProjectFiles() : [];
         this.project = new Project(new LSHost(this.tsPath, additionalFiles));
-        console.log(this.project.host.getScriptFileNames());
-
         let projectFiles = this.project.getProjectFiles();
-        // console.log(projectFiles);
 
         projectFiles.forEach(file => {
-            console.log(file);
             const sourceFile = this.project.getSourceFile(file);
             if (sourceFile.isDeclarationFile) {
                 return;
@@ -48,7 +45,7 @@ export default class RefactorPlugin {
             if (this.shouldRefactor(sourceFile)) {
                 const result = ts.transform(sourceFile, [moduleTransformer], {addExportsToAll: config.addExports});
                 const transformed = this.printer.printFile(result.transformed[0]);
-                this.project.updateSourceFile(file, ts.ScriptSnapshot.fromString(transformed));
+                this.project.updateSourceFile(file, transformed);
             }
 
             if (config.addImports) {
@@ -83,8 +80,7 @@ export default class RefactorPlugin {
         });
 
         if (text && text.length) {
-            this.project.updateSourceFile(fileName, ts.ScriptSnapshot.fromString(text));
-
+            this.project.updateSourceFile(fileName, text);
         }
     }
 
@@ -94,27 +90,8 @@ export default class RefactorPlugin {
         if (importOrganizeChanges && importOrganizeChanges.length) {
             let text = this.project.getCurrentContents(fileName);
             text = applyTextChanges(text, importOrganizeChanges[0].textChanges);
-            this.project.updateSourceFile(fileName, ts.ScriptSnapshot.fromString(text));
+            this.project.updateSourceFile(fileName, text);
         }
-    }
-
-
-    getFiles(): Map<string, IFileData> {
-        let tscom = fs.readFileSync(this.tsPath + '/tscommand.txt', 'utf8');
-        let files = new Map<string, IFileData>();
-        tscom.split('\n')
-            .filter((val) => {
-                val = val.trim();
-                return (val && val.endsWith('.ts'));
-            })
-            .forEach((val) => {
-                const path = this.tsPath + '/' + val;
-                files.set(path, {
-                    data: fs.readFileSync(path, 'utf8'),
-                    refactorInfo: null
-                });
-            });
-        return files;
     }
 
     /**
