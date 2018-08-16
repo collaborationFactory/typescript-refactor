@@ -6,7 +6,7 @@ import {
     isAngularExpressionButNotModuleDeclaration
 } from './angularjs';
 import {addExportToNode} from './exporter';
-import {AngularDeclaration, moduleIdentifier} from '../model';
+import {AngularDeclaration, moduleIdentifier, platformModuleNames} from '../model';
 import {metaData} from '../metaData';
 
 export function moduleTransformer(context: ts.TransformationContext) {
@@ -25,7 +25,6 @@ export function moduleTransformer(context: ts.TransformationContext) {
         ngDeclarations = [];
         refs = new Set<string>();
         ngRefs = new Set<string>();
-        console.log('processing file', sourceFile.fileName);
 
         sf = sourceFile;
         sourceFile = ts.visitNode(sourceFile, visitSourceFile);
@@ -69,6 +68,9 @@ export function moduleTransformer(context: ts.TransformationContext) {
         }
         let importSpecifiers: Array<ts.ImportSpecifier> = [];
         for (let ngRef of ngRefs) {
+            // remove generic/diamond marker
+            ngRef = ngRef.replace(/<.*>$/i, '');
+
             const importSpecifier = ts.createImportSpecifier(undefined,
                 ts.createIdentifier(ngRef));
             importSpecifiers.push(importSpecifier);
@@ -113,6 +115,12 @@ export function moduleTransformer(context: ts.TransformationContext) {
             let variableStatementNode = <ts.VariableStatement>node;
             let variableDeclaration = variableStatementNode.declarationList.declarations[0];
             let initializer = variableDeclaration.initializer;
+
+            // variable is only declared not initialized
+            if (!initializer) {
+                return;
+            }
+
             if (initializer.kind === ts.SyntaxKind.CallExpression) {
                 let callExpression = ts.createExpressionStatement(initializer);
                 if ('angular.module' === getFirstCallExpressionIdentifier(<ts.CallExpression>(callExpression.expression))) {
@@ -168,22 +176,25 @@ export function moduleTransformer(context: ts.TransformationContext) {
      * @param moduleDeclaration
      * @returns {ts.ModuleDeclaration}
      */
-    function getInnerMostModuleDeclarationFromDottedModule(moduleDeclaration: ts.ModuleDeclaration): ts.ModuleDeclaration {
+    function getInnerMostModuleDeclarationFromDottedModule(typescriptModuleName: string, moduleDeclaration: ts.ModuleDeclaration): ts.ModuleDeclaration {
+        typescriptModuleName = typescriptModuleName.concat(moduleDeclaration.name.text, '.');
         if (moduleDeclaration.body.kind === ts.SyntaxKind.ModuleDeclaration) {
-            const recursiveInnerModule = getInnerMostModuleDeclarationFromDottedModule(<ts.ModuleDeclaration>moduleDeclaration.body);
+            const recursiveInnerModule = getInnerMostModuleDeclarationFromDottedModule(typescriptModuleName, <ts.ModuleDeclaration>moduleDeclaration.body);
             return recursiveInnerModule || <ts.ModuleDeclaration>moduleDeclaration.body;
         }
+        platformModuleNames.add(typescriptModuleName.slice(0, -1));
     }
 
     function refactorModule(node: ts.ModuleDeclaration): Array<ts.Statement> {
         const statements: ts.Statement[] = [];
+        let typescriptModuleName: string = '';
         context.startLexicalEnvironment();
 
         let moduleBlock: ts.ModuleBlock;
         if (node.body.kind === ts.SyntaxKind.ModuleBlock) {
             moduleBlock = <ts.ModuleBlock>node.body;
         } else {
-            let moduleDec = getInnerMostModuleDeclarationFromDottedModule(node);
+            let moduleDec = getInnerMostModuleDeclarationFromDottedModule(typescriptModuleName, node);
             moduleBlock = <ts.ModuleBlock>moduleDec.body;
         }
         moduleBlock = ts.visitEachChild(moduleBlock, extractAndRemoveAngularDeclarations, context);

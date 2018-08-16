@@ -50,12 +50,14 @@ export function getAngularDeclaration(node: ts.Node, moduleIdentifier: string): 
                     function: decInfo[1].getText()
                 });
             } else {
-                ng.declarations[identifier.text] = [];
                 let decInfo = parent.arguments;
-                ng.declarations[identifier.text].push({
-                    name: decInfo[0].getText(),
-                    function: decInfo[1].getText()
-                });
+                if (decInfo.length === 2) {
+                    ng.declarations[identifier.text] = [];
+                    ng.declarations[identifier.text].push({
+                        name: decInfo[0].getText(),
+                        function: decInfo[1].getText()
+                    });
+                }
             }
         }
         return ng;

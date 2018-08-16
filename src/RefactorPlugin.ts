@@ -38,20 +38,29 @@ export default class RefactorPlugin {
         let projectFiles = this.project.getProjectFiles();
 
         projectFiles.forEach(file => {
-            const sourceFile = this.project.getSourceFile(file);
-            if (sourceFile.isDeclarationFile) {
-                return;
-            }
-            if (this.shouldRefactor(sourceFile)) {
-                const result = ts.transform(sourceFile, [moduleTransformer], {addExportsToAll: config.addExports});
-                const transformed = this.printer.printFile(result.transformed[0]);
-                this.project.updateSourceFile(file, transformed);
+            try {
+
+                // console.log('processing file', file);
+                const sourceFile = this.project.getSourceFile(file);
+                if (sourceFile.isDeclarationFile) {
+                    return;
+                }
+                if (this.shouldRefactor(sourceFile)) {
+                    const result = ts.transform(sourceFile, [moduleTransformer], {addExportsToAll: config.addExports});
+                    const transformed = this.printer.printFile(result.transformed[0]);
+                    this.project.updateSourceFile(file, transformed);
+                    // console.log('module refactor done');
+                    // console.log(transformed);
+                }
+
+                if (config.addImports) {
+                    this.resolveImports(file);
+                    this.organizeImports(file);
+                }
+            } catch (e) {
+                console.log(file, e)
             }
 
-            if (config.addImports) {
-                this.resolveImports(file);
-                this.organizeImports(file);
-            }
         });
 
         // YaY!! All done. Save all files
@@ -107,7 +116,6 @@ export default class RefactorPlugin {
     shouldRefactor(sourceFile: ts.SourceFile) {
         let refactor = false;
         sourceFile.forEachChild((node) => {
-            // console.log(ts.SyntaxKind[node.kind]);
             if (node.kind === ts.SyntaxKind.ModuleDeclaration) {
                 return refactor = true;
             }
@@ -116,40 +124,21 @@ export default class RefactorPlugin {
     }
 
     createConfigFile() {
-        const paths = {
-            '*': ['../../../cf.cplace.platform/assets/node_modules/@types/*'],
-            '@platform/*': ['../../../cf.cplace.platform/assets/ts/*']
-        };
-
-        const references = [
-            {
-                path: '../../../cf.cplace.platform/assets/ts'
-            }
-        ];
-
-        let config = {
-            'compilerOptions': {
-                'baseUrl': '.',
+        let tsconfig: any = {
+            extends: '',
+            compilerOptions: {
                 'rootDir': '.',
-                'experimentalDecorators': true,
-                'target': 'es5',
-                'outDir': '../generated_js',
-                'strict': true,
-                'composite': true,
-                'declaration': true,
-                'declarationMap': true,
-                'sourceMap': true
+                'baseUrl': '.'
             },
-            'include': ['./**/*.ts']
+            include: ['./**/*.ts']
         };
 
-        if (this.plugin !== 'cf.cplace.platform') {
-            config.compilerOptions['paths'] = paths;
-            config['references'] = references;
+        if (this.plugin === 'cf.cplace.platform') {
+            tsconfig.extends = '../../../tsconfig.settings.json';
         } else {
-            config.compilerOptions['composite'] = true;
+            tsconfig.extends = '../../../tsconfig.base.json';
         }
         const tsconfigPath = path.join(this.tsPath, 'tsconfig.json');
-        saveFile(tsconfigPath, JSON.stringify(config, null, 4));
+        saveFile(tsconfigPath, JSON.stringify(tsconfig, null, 4));
     }
 }
