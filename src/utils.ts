@@ -16,19 +16,11 @@ export function append(to, value) {
 export function addRange(to, from) {
     if (from === undefined)
         return to;
-    for (var _i = 0, from_1 = from; _i < from_1.length; _i++) {
-        var v = from_1[_i];
+    for (let i = 0, fromCopy = from; i < fromCopy.length; i++) {
+        let v = fromCopy[i];
         to = append(to, v);
     }
     return to;
-}
-
-export function moveRangePos(range: ts.TextRange, pos: number): ts.TextRange {
-    return createRange(pos, range.end);
-}
-
-export function createRange(pos: number, end: number): ts.TextRange {
-    return {pos, end};
 }
 
 export function removeQuotes(value: string) {

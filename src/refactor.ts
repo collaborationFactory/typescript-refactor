@@ -28,7 +28,7 @@ export default class RefactorCplaceTS {
             return;
         }
 
-        if (!this.typesAreInstalled()) {
+        if (!RefactorCplaceTS.typesAreInstalled()) {
             log.fatal('To begin refactoring install required types in the platform plugin');
             process.exit();
             return;
@@ -49,7 +49,7 @@ export default class RefactorCplaceTS {
         }
     }
 
-    typesAreInstalled(): boolean {
+    static typesAreInstalled(): boolean {
         // we can add more checks to be 100% sure
         return fs.existsSync(path.join(config.platformPath, 'assets', 'node_modules', '@types', 'angular', 'index.d.ts'));
     }
@@ -69,6 +69,12 @@ export default class RefactorCplaceTS {
                 'target': 'es5',
                 'outDir': '../generated_js',
                 'strict': true,
+                // null and undefined are not assignable to concrete types
+                'strictNullChecks': false,
+                // any type has to be declared it cannot be inferred
+                'noImplicitAny': false,
+                // https://github.com/Microsoft/TypeScript/issues/19661
+                'strictFunctionTypes': false,
                 'composite': true,
                 'declaration': true,
                 'declarationMap': true,

@@ -217,23 +217,28 @@ export function moduleTransformer(context: ts.TransformationContext) {
      * @param node
      */
     function checkAndReplaceReferences(node: ts.Node): ts.VisitResult<ts.Node> {
-        if (node.kind === ts.SyntaxKind.TypeReference || node.kind === ts.SyntaxKind.PropertyAccessExpression) {
+        if (node.kind === ts.SyntaxKind.TypeReference || node.kind === ts.SyntaxKind.PropertyAccessExpression || node.kind === ts.SyntaxKind.ExpressionWithTypeArguments) {
             let qualifiedName = node.getText();
             // all angular interfaces/types are prefixed with 'I' and we use them as 'ng.IScope'
             // we also make sure that we only replace type references
-            if (qualifiedName.startsWith('ng.I') && node.kind === ts.SyntaxKind.TypeReference) {
+            if (qualifiedName.startsWith('ng.I')) {
                 qualifiedName = qualifiedName.replace('ng.', '');
                 ngRefs.add(qualifiedName);
                 let qualifiedNameIdentifier = ts.createIdentifier(qualifiedName);
-                return ts.updateTypeReferenceNode(<ts.TypeReferenceNode>node, qualifiedNameIdentifier, undefined);
+                if (node.kind === ts.SyntaxKind.TypeReference) {
+                    return ts.updateTypeReferenceNode(<ts.TypeReferenceNode>node, qualifiedNameIdentifier, undefined);
+                } else if (node.kind === ts.SyntaxKind.ExpressionWithTypeArguments) {
+                    return ts.updateExpressionWithTypeArguments(<ts.ExpressionWithTypeArguments>node, undefined, qualifiedNameIdentifier);
+                }
             } else if (qualifiedName.startsWith('cf.cplace.platform')) {
                 qualifiedName = qualifiedName.replace('cf.cplace.platform.', '');
                 let qualifiedNameIdentifier = ts.createIdentifier(qualifiedName);
                 if (node.kind === ts.SyntaxKind.TypeReference) {
                     return ts.updateTypeReferenceNode(<ts.TypeReferenceNode>node, qualifiedNameIdentifier, undefined);
-                }
-                if (node.kind === ts.SyntaxKind.PropertyAccessExpression) {
+                } else if (node.kind === ts.SyntaxKind.PropertyAccessExpression) {
                     return ts.createIdentifier(qualifiedName);
+                } else if (node.kind === ts.SyntaxKind.ExpressionWithTypeArguments) {
+                    return ts.updateExpressionWithTypeArguments(<ts.ExpressionWithTypeArguments>node, undefined, qualifiedNameIdentifier);
                 }
             }
         } else {

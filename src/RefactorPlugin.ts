@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as ts from 'typescript';
 import {moduleTransformer} from './transformer/moduleTransformer';
 import {config} from './config';
-import {IFileData} from './model';
+import {IFileData, platformModuleNames} from './model';
 import {applyTextChanges, copyFolderRecursiveSync, ensureDirExists, saveFile} from './utils';
 import {Project} from './ts/Project';
 import {LSHost} from './ts/LSHost';
@@ -39,8 +39,7 @@ export default class RefactorPlugin {
 
         projectFiles.forEach(file => {
             try {
-
-                // console.log('processing file', file);
+                console.log('processing file', file);
                 const sourceFile = this.project.getSourceFile(file);
                 if (sourceFile.isDeclarationFile) {
                     return;
@@ -49,8 +48,6 @@ export default class RefactorPlugin {
                     const result = ts.transform(sourceFile, [moduleTransformer], {addExportsToAll: config.addExports});
                     const transformed = this.printer.printFile(result.transformed[0]);
                     this.project.updateSourceFile(file, transformed);
-                    // console.log('module refactor done');
-                    // console.log(transformed);
                 }
 
                 if (config.addImports) {
@@ -63,8 +60,10 @@ export default class RefactorPlugin {
 
         });
 
+        console.log(platformModuleNames);
+
         // YaY!! All done. Save all files
-        this.project.persist();
+        // this.project.persist();
 
         return this.project;
     }
