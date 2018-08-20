@@ -1,20 +1,17 @@
 import * as ts from 'typescript';
 import * as utils from '../utils';
-import {
-    getAngularDeclaration,
-    getFirstCallExpressionIdentifier,
-    isAngularExpressionButNotModuleDeclaration
-} from './angularjs';
+import {getAngularDeclaration, getFirstCallExpressionIdentifier, isAngularExpression} from './angularjs';
 import {addExportToNode} from './exporter';
-import {AngularDeclaration, moduleIdentifier, platformModuleNames} from '../model';
+import {AngularDeclaration, platformModuleNames} from '../model';
 import {metaData} from '../metaData';
 
 export function moduleTransformer(context: ts.TransformationContext) {
     let ngDeclarations: Array<AngularDeclaration>;
     let sf: ts.SourceFile;
     let addExports = context.getCompilerOptions().addExportsToAll;
-    let refs: Set<string>;
     let ngRefs: Set<string>;
+    let tsModuleName = '';
+
     return transformModuleDeclaration;
 
 
@@ -23,30 +20,16 @@ export function moduleTransformer(context: ts.TransformationContext) {
             return sourceFile;
         }
         ngDeclarations = [];
-        refs = new Set<string>();
         ngRefs = new Set<string>();
 
         sf = sourceFile;
         sourceFile = ts.visitNode(sourceFile, visitSourceFile);
-        ts.forEachChild(sourceFile, findReferences);
 
         ngDeclarations.forEach(dec => {
             metaData.addNgDeclaration(dec.module, dec.declarations);
         });
 
         return sourceFile;
-    }
-
-    function findReferences(node: ts.Node) {
-        // TODO: config option for other fully qualified starts eg. de.conti
-        if (node.kind === ts.SyntaxKind.TypeReference || node.kind === ts.SyntaxKind.PropertyAccessExpression) {
-            const ref = node.getText(sf);
-            if (ref.startsWith('cf.cplace.platform.')) {
-                refs.add(ref);
-            }
-        } else {
-            ts.forEachChild(node, findReferences);
-        }
     }
 
     /**
@@ -124,11 +107,17 @@ export function moduleTransformer(context: ts.TransformationContext) {
             if (initializer.kind === ts.SyntaxKind.CallExpression) {
                 let callExpression = ts.createExpressionStatement(initializer);
                 if ('angular.module' === getFirstCallExpressionIdentifier(<ts.CallExpression>(callExpression.expression))) {
-                    metaData.addNgModuleIdentifier(variableDeclaration.name.getText(), (<ts.CallExpression>initializer).arguments[0].getText());
-                    moduleIdentifier.name = variableDeclaration.name.getText();
-                    const dec = getAngularDeclaration(callExpression, moduleIdentifier.name);
-                    // metaData.addNgDeclaration(dec.module, dec.declarations);
-                    ngDeclarations.push(dec);
+                    metaData.addNgModuleIdentifier((<ts.CallExpression>initializer).arguments[0].getText(), sf.fileName, tsModuleName, variableDeclaration.name.getText());
+                    ngDeclarations.push(getAngularDeclaration(callExpression, tsModuleName));
+                }
+            }
+        } else if (node.kind === ts.SyntaxKind.ExpressionStatement) {
+            const expression = (<ts.ExpressionStatement>node).expression;
+            if (expression.kind === ts.SyntaxKind.CallExpression) {
+                let callExpression = ts.createExpressionStatement(expression);
+                if ('angular.module' === getFirstCallExpressionIdentifier(<ts.CallExpression>(callExpression.expression))) {
+                    metaData.addNgModuleIdentifier((<ts.CallExpression>expression).arguments[0].getText(), sf.fileName, tsModuleName);
+                    ngDeclarations.push(getAngularDeclaration(callExpression, tsModuleName));
                 }
             }
         }
@@ -137,10 +126,8 @@ export function moduleTransformer(context: ts.TransformationContext) {
     function extractAndRemoveAngularDeclarations(node: ts.Node) {
         checkIfAngularModuleDeclaration(node);
         if (node.kind === ts.SyntaxKind.ExpressionStatement) {
-            if (isAngularExpressionButNotModuleDeclaration(<ts.ExpressionStatement>node)) {
-                const dec = getAngularDeclaration((<ts.ExpressionStatement>node).expression as ts.CallExpression, moduleIdentifier.name);
-                // metaData.addNgDeclaration(dec.module, dec.declarations);
-                ngDeclarations.push(dec);
+            if (isAngularExpression(<ts.ExpressionStatement>node)) {
+                ngDeclarations.push(getAngularDeclaration((<ts.ExpressionStatement>node).expression as ts.CallExpression, tsModuleName));
                 return undefined;
             }
         }
@@ -161,7 +148,7 @@ export function moduleTransformer(context: ts.TransformationContext) {
     /**
      *
      * In typescript module declaration of the form
-     *      module cf.cplace.paltform.search { // module code}
+     *      module cf.cplace.platform.search { // module code}
      * is converted to
      *   module cf {
      *      module cplace {
@@ -173,6 +160,7 @@ export function moduleTransformer(context: ts.TransformationContext) {
      *      }
      *   }
      *
+     * @param typescriptModuleName
      * @param moduleDeclaration
      * @returns {ts.ModuleDeclaration}
      */
@@ -182,7 +170,9 @@ export function moduleTransformer(context: ts.TransformationContext) {
             const recursiveInnerModule = getInnerMostModuleDeclarationFromDottedModule(typescriptModuleName, <ts.ModuleDeclaration>moduleDeclaration.body);
             return recursiveInnerModule || <ts.ModuleDeclaration>moduleDeclaration.body;
         }
-        platformModuleNames.add(typescriptModuleName.slice(0, -1));
+
+        tsModuleName = typescriptModuleName.slice(0, -1);
+        platformModuleNames.add(tsModuleName);
     }
 
     function refactorModule(node: ts.ModuleDeclaration): Array<ts.Statement> {

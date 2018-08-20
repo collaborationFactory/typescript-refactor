@@ -1,15 +1,19 @@
 import * as ts from 'typescript';
-import {AngularDeclaration, moduleIdentifier} from '../model';
+import {AngularDeclaration} from '../model';
 import {metaData} from '../metaData';
 
 /**
  * angular expression should always start with
- * angular.module
+ * angular.module or a variable that was assigned angular.module declaration result
+ *
+ * angular.module().directive(...)
+ * let MODULE = angular.module('my.angular.module', []);
+ * MODULE.directive(...):
  *
  * @param node
  * @returns {boolean}
  */
-export function isAngularExpressionButNotModuleDeclaration(node: ts.ExpressionStatement): boolean {
+export function isAngularExpression(node: ts.ExpressionStatement): boolean {
     if (node.expression.kind === ts.SyntaxKind.CallExpression) {
         let identifier = getFirstCallExpressionIdentifier(<ts.CallExpression>(node.expression));
         return identifier === 'angular';
@@ -23,9 +27,9 @@ export function isAngularExpressionButNotModuleDeclaration(node: ts.ExpressionSt
  *      angular.module().controller().service().directive()
  *
  * @param node
- * @param moduleIdentifier
+ * @param tsModuleName
  */
-export function getAngularDeclaration(node: ts.Node, moduleIdentifier: string): AngularDeclaration {
+export function getAngularDeclaration(node: ts.Node, tsModuleName: string): AngularDeclaration {
     return (function recurseChained(expr: ts.Node): AngularDeclaration {
         if (expr.kind === ts.SyntaxKind.Identifier) {
             return {} as AngularDeclaration;
@@ -39,8 +43,8 @@ export function getAngularDeclaration(node: ts.Node, moduleIdentifier: string): 
             if (identifier.text === 'module') {
                 ng.module = parent.arguments[0].getText();
                 ng.declarations = {};
-            } else if (metaData.getNgModuleForIdentifier(propertyAccessExpression.expression.getText())) {
-                ng.module = metaData.getNgModuleForIdentifier(propertyAccessExpression.expression.getText());
+            } else if (metaData.getNgModuleForIdentifier(propertyAccessExpression.expression.getText(), tsModuleName)) {
+                ng.module = metaData.getNgModuleForIdentifier(propertyAccessExpression.expression.getText(), tsModuleName);
                 ng.declarations = {};
                 ng.declarations[identifier.text] = [];
 
@@ -78,14 +82,13 @@ export function getAngularDeclaration(node: ts.Node, moduleIdentifier: string): 
 export function getFirstCallExpressionIdentifier(expr: ts.CallExpression): string {
     if (expr.expression.kind === ts.SyntaxKind.PropertyAccessExpression && expr.arguments.length === 2) {
         let propertyAccessExpression = <ts.PropertyAccessExpression>(expr.expression);
-        if (propertyAccessExpression.expression.kind === ts.SyntaxKind.Identifier
-            && propertyAccessExpression.name.kind === ts.SyntaxKind.Identifier) {
+        if (propertyAccessExpression.expression.kind === ts.SyntaxKind.Identifier && propertyAccessExpression.name.kind === ts.SyntaxKind.Identifier) {
             let expressionIdentifier = <ts.Identifier>(propertyAccessExpression.expression);
             let nameIdentifier = <ts.Identifier>(propertyAccessExpression.name);
             if (expressionIdentifier.text === 'angular' && nameIdentifier.text === 'module') {
                 return 'angular.module';
             }
-            if (expressionIdentifier.text === moduleIdentifier.name) {
+            if (metaData.getNgModuleForIdentifier(expressionIdentifier.text)) {
                 return 'angular';
             }
         } else {
