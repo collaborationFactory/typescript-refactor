@@ -22,7 +22,9 @@ export class Project {
         insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces: false,
         insertSpaceAfterOpeningAndBeforeClosingTemplateStringBraces: false,
         placeOpenBraceOnNewLineForFunctions: false,
-        placeOpenBraceOnNewLineForControlBlocks: false
+        placeOpenBraceOnNewLineForControlBlocks: false,
+        indentMultiLineObjectLiteralBeginningOnBlankLine: true,
+        insertSpaceAfterTypeAssertion: true
     };
 
     static USER_PREFERENCES: ts.UserPreferences = {

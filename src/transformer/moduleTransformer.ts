@@ -228,8 +228,9 @@ export function moduleTransformer(context: ts.TransformationContext) {
                 } else if (node.kind === ts.SyntaxKind.ExpressionWithTypeArguments) {
                     return ts.updateExpressionWithTypeArguments(<ts.ExpressionWithTypeArguments>node, undefined, qualifiedNameIdentifier);
                 }
-            } else if (qualifiedName.startsWith('cf.cplace.platform')) {
-                qualifiedName = qualifiedName.replace('cf.cplace.platform.', '');
+            } else if (qualifiedName.startsWith('cf.cplace.platform.')) {
+                let platformModule = getLongestModuleReference(qualifiedName);
+                qualifiedName = qualifiedName.replace(platformModule + '.', '');
                 let qualifiedNameIdentifier = ts.createIdentifier(qualifiedName);
                 if (node.kind === ts.SyntaxKind.TypeReference) {
                     return ts.updateTypeReferenceNode(<ts.TypeReferenceNode>node, qualifiedNameIdentifier, undefined);
@@ -243,6 +244,15 @@ export function moduleTransformer(context: ts.TransformationContext) {
             return ts.visitEachChild(node, checkAndReplaceReferences, context);
         }
         return node;
+    }
+
+
+    function getLongestModuleReference(qualifiedName: string): string {
+        if (platformModuleNames.has(qualifiedName)) {
+            return qualifiedName;
+        }
+
+        return getLongestModuleReference(qualifiedName.substr(0, qualifiedName.lastIndexOf('.')));
     }
 
     function isUseStrict(node: ts.ExpressionStatement): boolean {
