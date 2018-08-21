@@ -56,6 +56,7 @@ export function getAngularDeclaration(node: ts.Node, tsModuleName: string): Angu
             } else {
                 let decInfo = parent.arguments;
                 if (decInfo.length === 2) {
+                    ng.declarations = ng.declarations || {};
                     ng.declarations[identifier.text] = [];
                     ng.declarations[identifier.text].push({
                         name: decInfo[0].getText(),
@@ -103,4 +104,27 @@ function getCallExpressionIdentifier(expr: ts.Node): string {
         return (<ts.Identifier>expr).text;
     }
     return getCallExpressionIdentifier((<ts.CallExpression>expr).expression);
+}
+
+
+/**
+ * returns first call expression from chain of call expressions
+ * eg. angular.module().controller().directive().... => angular.module()
+ */
+export function getFirstCallExpression(node: ts.CallExpression) {
+    let more = true;
+    let firstCallExpression: ts.CallExpression = node;
+    while (more) {
+        if (firstCallExpression.expression.kind === ts.SyntaxKind.PropertyAccessExpression) {
+            let pae = <ts.PropertyAccessExpression>firstCallExpression.expression;
+            if (pae.expression.kind === ts.SyntaxKind.CallExpression) {
+                firstCallExpression = <ts.CallExpression>pae.expression;
+            } else {
+                more = false;
+            }
+        } else {
+            more = false;
+        }
+    }
+    return firstCallExpression;
 }

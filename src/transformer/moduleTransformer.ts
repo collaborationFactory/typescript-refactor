@@ -1,6 +1,11 @@
 import * as ts from 'typescript';
 import * as utils from '../utils';
-import {getAngularDeclaration, getFirstCallExpressionIdentifier, isAngularExpression} from './angularjs';
+import {
+    getAngularDeclaration,
+    getFirstCallExpression,
+    getFirstCallExpressionIdentifier,
+    isAngularExpression
+} from './angularjsUtils';
 import {addExportToNode} from './exporter';
 import {AngularDeclaration, platformModuleNames} from '../model';
 import {metaData} from '../metaData';
@@ -54,8 +59,7 @@ export function moduleTransformer(context: ts.TransformationContext) {
             // remove generic/diamond marker
             ngRef = ngRef.replace(/<.*>$/i, '');
 
-            const importSpecifier = ts.createImportSpecifier(undefined,
-                ts.createIdentifier(ngRef));
+            const importSpecifier = ts.createImportSpecifier(undefined, ts.createIdentifier(ngRef));
             importSpecifiers.push(importSpecifier);
         }
         const importClause = ts.createImportClause(undefined, ts.createNamedImports(importSpecifiers));
@@ -93,7 +97,7 @@ export function moduleTransformer(context: ts.TransformationContext) {
         return node;
     }
 
-    function checkIfAngularModuleDeclaration(node: ts.Node) {
+    function checkIfAngularModuleDeclaration(node: ts.Node): boolean {
         if (node.kind === ts.SyntaxKind.VariableStatement) {
             let variableStatementNode = <ts.VariableStatement>node;
             let variableDeclaration = variableStatementNode.declarationList.declarations[0];
@@ -101,14 +105,16 @@ export function moduleTransformer(context: ts.TransformationContext) {
 
             // variable is only declared not initialized
             if (!initializer) {
-                return;
+                return false;
             }
 
             if (initializer.kind === ts.SyntaxKind.CallExpression) {
                 let callExpression = ts.createExpressionStatement(initializer);
                 if ('angular.module' === getFirstCallExpressionIdentifier(<ts.CallExpression>(callExpression.expression))) {
-                    metaData.addNgModuleIdentifier((<ts.CallExpression>initializer).arguments[0].getText(), sf.fileName, tsModuleName, variableDeclaration.name.getText());
+                    const ngCallExpr = getFirstCallExpression(<ts.CallExpression>initializer);
+                    metaData.addNgModuleIdentifier(ngCallExpr.arguments[0].getText(), sf.fileName, tsModuleName, variableDeclaration.name.getText());
                     ngDeclarations.push(getAngularDeclaration(callExpression, tsModuleName));
+                    return true;
                 }
             }
         } else if (node.kind === ts.SyntaxKind.ExpressionStatement) {
@@ -118,17 +124,19 @@ export function moduleTransformer(context: ts.TransformationContext) {
                 if ('angular.module' === getFirstCallExpressionIdentifier(<ts.CallExpression>(callExpression.expression))) {
                     metaData.addNgModuleIdentifier((<ts.CallExpression>expression).arguments[0].getText(), sf.fileName, tsModuleName);
                     ngDeclarations.push(getAngularDeclaration(callExpression, tsModuleName));
+                    return true;
                 }
             }
         }
+        return false;
     }
 
     function extractAndRemoveAngularDeclarations(node: ts.Node) {
-        checkIfAngularModuleDeclaration(node);
+        let isModule = checkIfAngularModuleDeclaration(node);
         if (node.kind === ts.SyntaxKind.ExpressionStatement) {
             if (isAngularExpression(<ts.ExpressionStatement>node)) {
                 ngDeclarations.push(getAngularDeclaration((<ts.ExpressionStatement>node).expression as ts.CallExpression, tsModuleName));
-                return undefined;
+                return isModule ? node : undefined;
             }
         }
         return node;

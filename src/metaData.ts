@@ -84,17 +84,12 @@ class _MetaData {
         }
     }
 
-    getNgDeclarations(module: string) {
-
+    getNgModuleInfo() {
+        return this.ngModuleToInfo;
     }
 
-    getAllNgDeclarations() {
-    }
-
-
-    toString() {
-        console.log(this.ngModuleToInfo);
-        console.log(this.ngDeclarations);
+    getDeclarationsForModule(module: string) {
+        return this.ngDeclarations.get(module);
     }
 }
 
