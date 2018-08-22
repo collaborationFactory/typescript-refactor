@@ -1,27 +1,22 @@
 {
-  "name": "cplace-typescript-refactor",
-  "version": "1.0.0",
-  "description": "Utility to automate some trivial task in refactoring typescript files to new module system",
+  "name": "@cplace/ts-refactor",
+  "version": "0.1.0",
+  "description": "Utility to automate some trivial tasks in refactoring typescript files to ES6 modules style",
   "main": "index.js",
   "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npm run build:live",
     "build:live": "nodemon --exec './node_modules/.bin/ts-node --cache-directory .tscache' ./src/index.ts"
   },
+  "bin": {
+    "cplace-ts-refactor": "dist/src/ts-refactor.js"
+  },
+  "author": "collaboration Factory AG",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pragatisureka/cplace-typescript-refactor.git"
+    "url": "git+https://github.com/collaborationFactory/typescript-refactor.git"
   },
-  "keywords": [
-    "typescript",
-    "parser",
-    "refactor"
-  ],
-  "author": "pragati",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/pragatisureka/cplace-typescript-refactor/issues"
-  },
-  "homepage": "https://github.com/pragatisureka/cplace-typescript-refactor#readme",
+  "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
     "@types/node": "^10.5.4",
     "nodemon": "^1.18.3",
