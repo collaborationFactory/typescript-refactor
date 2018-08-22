@@ -7,6 +7,7 @@ import {Project} from './ts/Project';
 import {LSHost} from './ts/LSHost';
 import {initMetaData, metaData} from './metaData';
 import {angularDeclarationsTransformer} from './transformer/angularModuleDeclarations';
+import {Logger} from './logger';
 
 export default class RefactorPlugin {
     private readonly tsPath: string;
@@ -38,7 +39,7 @@ export default class RefactorPlugin {
 
         projectFiles.forEach(file => {
             try {
-                console.log('processing file', file);
+                Logger.log('Processing file', file);
                 const sourceFile = this.project.getSourceFile(file);
                 if (sourceFile.isDeclarationFile) {
                     return;
@@ -54,7 +55,7 @@ export default class RefactorPlugin {
                     this.organizeImports(file);
                 }
             } catch (e) {
-                console.log(file, e)
+                Logger.error(file, e);
             }
         });
 

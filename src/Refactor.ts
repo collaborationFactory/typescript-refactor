@@ -6,16 +6,12 @@ import RefactorPlugin from './RefactorPlugin';
 import {Project} from './ts/Project';
 import {LSHost} from './ts/LSHost';
 import {saveFile} from './utils';
-import {getLogger} from './logger';
-
-let logger = getLogger();
+import {Logger} from './logger';
 
 export default class Refactor {
     private platformProject: Project;
-    private currentDir: string;
 
     constructor() {
-        this.currentDir = process.cwd();
     }
 
     public static typesAreInstalled(): boolean {
@@ -28,13 +24,13 @@ export default class Refactor {
         // We consider a plugin to be refactored if there is tsconfig.json present in assets/ts folder
         const isPlatformRefactored = fs.existsSync(path.join(platformTsPath, 'tsconfig.json'));
         if (config.isSubRepo && !isPlatformRefactored) {
-            logger.fatal('Before refactoring sub-repos make sure that at least platform plugin in main repo is already refactored');
+            Logger.fatal('Before refactoring sub-repos make sure that at least platform plugin in main repo is already refactored');
             process.exit();
             return;
         }
 
         if (!Refactor.typesAreInstalled()) {
-            logger.fatal('To begin refactoring install required types in the platform plugin');
+            Logger.fatal('To begin refactoring install required types in the platform plugin');
             process.exit();
             return;
         }

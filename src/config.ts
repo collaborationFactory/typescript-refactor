@@ -4,7 +4,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import {getLogger} from './logger';
+import {Logger} from './logger';
 
 export interface IConfig {
     isSubRepo: boolean;
@@ -53,7 +53,7 @@ export function detectAndGenerateConfig(commandLineOptions: any): IConfig {
         error = true;
     }
     if (error) {
-        getLogger().fatal('Could not determine path to main repository. Make sure the script is running from either root of "main" repo or from the root of subrepo');
+        Logger.fatal('Could not determine path to main repository. Make sure the script is running from either root of "main" repo or from the root of subrepo');
     }
 
     if (commandLineOptions.plugins && commandLineOptions.plugins.length) {

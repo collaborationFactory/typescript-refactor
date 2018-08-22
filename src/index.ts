@@ -5,9 +5,7 @@
 
 import Refactor from './Refactor';
 import {detectAndGenerateConfig} from './config';
-import {getLogger, setVerboseLogging} from './logger';
-
-let logger = getLogger();
+import {Logger} from './logger';
 
 (() => {
     const argv = process.argv;
@@ -27,7 +25,6 @@ let logger = getLogger();
         console.log('   -noImports', '     Do not try to resolve reference error and add import statements if possible');
         console.log('   -noExports', '     Do not add export keyword to all top level functions, classes and interfaces of a refactored file');
         console.log('   -plugins cf.cplace.cp4p.planning,cf.cplace.training.extended', '     List of plugins to refactor');
-
         return;
     }
 
@@ -51,20 +48,17 @@ let logger = getLogger();
                 configJSON.addExports = false;
                 break;
             default:
-                console.warn('Unrecognised configuration flag ', argv[i], ' ...skipping');
+                Logger.warn('Unrecognised configuration flag ', argv[i], ' ...skipping');
         }
     }
 
-    if (configJSON.verbose) {
-        setVerboseLogging();
-    }
+    Logger.setVerboseLogging(configJSON.verbose);
 
     // configJSON.plugins = ['cf.cplace.cp4p.planning'];
     // configJSON.addExports = true;
     // configJSON.addImports = true;
-
     const config = detectAndGenerateConfig(configJSON);
-    logger.info('Running with configuration ', JSON.stringify(config, null, 4));
+    Logger.log('Running with configuration ', JSON.stringify(config, null, 4));
 
     new Refactor().start();
 
