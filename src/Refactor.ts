@@ -6,7 +6,9 @@ import RefactorPlugin from './RefactorPlugin';
 import {Project} from './ts/Project';
 import {LSHost} from './ts/LSHost';
 import {saveFile} from './utils';
-import {logger} from './logger';
+import {getLogger} from './logger';
+
+let logger = getLogger();
 
 export default class Refactor {
     private platformProject: Project;

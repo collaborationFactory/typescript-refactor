@@ -4,8 +4,16 @@
 
 import * as simpleNodeLogger from 'simple-node-logger';
 
-export let logger;
+let logger;
 
-export function createAndInitLogger(): void {
-    logger = simpleNodeLogger.createSimpleLogger();
+function createAndInitLogger(): void {
+    return simpleNodeLogger.createSimpleLogger();
+}
+
+export function getLogger() {
+    if (!logger) {
+        logger = createAndInitLogger();
+    }
+
+    return logger;
 }

@@ -1,10 +1,13 @@
+#!/usr/bin/env node
 /**
  *  Module entry point
  */
 
 import Refactor from './Refactor';
 import {detectAndGenerateConfig} from './config';
-import {logger} from './logger';
+import {getLogger} from './logger';
+
+let logger = getLogger();
 
 (() => {
     const argv = process.argv;
