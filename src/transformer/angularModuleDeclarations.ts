@@ -1,7 +1,7 @@
 import * as ts from 'typescript';
 import {getFirstCallExpression, getFirstCallExpressionIdentifier} from './angularjsUtils';
 import {metaData} from '../metaData';
-import {NgDeclarations} from '../model';
+import {INgDeclarations} from '../model';
 
 
 export function angularDeclarationsTransformer(context: ts.TransformationContext) {
@@ -73,7 +73,7 @@ export function angularDeclarationsTransformer(context: ts.TransformationContext
 
         const declarationsForModule = metaData.getDeclarationsForModule(firstCallExpression.arguments[0].getText());
         // sort so that controllers are before directives
-        const declarations: NgDeclarations = Object.keys(declarationsForModule).sort().reduce((acc, currentValue) => {
+        const declarations: INgDeclarations = Object.keys(declarationsForModule).sort().reduce((acc, currentValue) => {
             acc[currentValue] = declarationsForModule[currentValue];
             return acc;
         }, {});

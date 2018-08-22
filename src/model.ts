@@ -1,12 +1,16 @@
-export interface AngularDeclaration {
-    module: string;
-    declarations: NgDeclarations;
+/**
+ * Global interfaces and data structures
+ */
+
+export interface IAngularDeclaration {
+    ngModule: string;
+    declarations: INgDeclarations;
 }
 
-export interface NgDeclarations {
-    [type: string]: Array<{
+export interface INgDeclarations {
+    [declarationType: string]: Array<{
         name: string;
-        function: string;
+        func: string;
     }>;
 }
 

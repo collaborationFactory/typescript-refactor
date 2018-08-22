@@ -1,12 +1,16 @@
+/**
+ * Creates a global config object
+ */
+
 import * as fs from 'fs';
 import * as path from 'path';
-import {log} from './index';
+import {logger} from './logger';
 
-export interface RConfig {
+export interface IConfig {
     isSubRepo: boolean;
     mainRepoPath: string;
     platformPath: string;
-    plugins: Array<string>;
+    plugins: string[];
 
     verbose: boolean;
     addImports: true;
@@ -19,11 +23,10 @@ export const PLATFORM_PLUGIN = 'cf.cplace.platform';
 /**
  * This config will be used throughout the script
  */
-export let config: RConfig = {} as RConfig;
+export let config: IConfig = {} as IConfig;
 
-export function detectAndGenerateConfig(commandLineOptions: any) {
-    // const currentDir = process.cwd();
-    const currentDir = '/Users/pragatisureka/Documents/test/main';
+export function detectAndGenerateConfig(commandLineOptions: any): IConfig {
+    const currentDir = process.cwd();
 
     config.verbose = commandLineOptions.verbose;
     config.addExports = commandLineOptions.addExports;
@@ -50,9 +53,8 @@ export function detectAndGenerateConfig(commandLineOptions: any) {
         error = true;
     }
     if (error) {
-        log.fatal('Could not determine path to main repository. Make sure the script is running from either root of "main" repo or from the root of subrepo');
+        logger.fatal('Could not determine path to main repository. Make sure the script is running from either root of "main" repo or from the root of subrepo');
     }
-
 
     if (commandLineOptions.plugins && commandLineOptions.plugins.length) {
         config.plugins = commandLineOptions.plugins;
@@ -64,7 +66,7 @@ export function detectAndGenerateConfig(commandLineOptions: any) {
 }
 
 function getPluginInRepo(repoPath: string): string[] {
-    let plugins = [];
+    const plugins = [];
     const files = fs.readdirSync(repoPath);
     files.forEach(file => {
         const filePath = path.join(repoPath, file);

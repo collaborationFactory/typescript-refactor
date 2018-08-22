@@ -2,16 +2,15 @@ import * as path from 'path';
 import * as ts from 'typescript';
 import {moduleTransformer} from './transformer/moduleTransformer';
 import {config} from './config';
-import {IFileData, platformModuleNames} from './model';
 import {applyTextChanges, copyFolderRecursiveSync, ensureDirExists, saveFile} from './utils';
 import {Project} from './ts/Project';
 import {LSHost} from './ts/LSHost';
-import {initMetaData} from './metaData';
+import {initMetaData, metaData} from './metaData';
+import {angularDeclarationsTransformer} from './transformer/angularModuleDeclarations';
 
 export default class RefactorPlugin {
     private readonly tsPath: string;
     private project: Project;
-    files: Map<string, IFileData>;
     printer: ts.Printer;
 
     constructor(private plugin: string, private readonly platformProject?: Project) {
@@ -57,13 +56,24 @@ export default class RefactorPlugin {
             } catch (e) {
                 console.log(file, e)
             }
-
         });
 
-        console.log(platformModuleNames);
+        const ngModuleInfo = metaData.getNgModuleInfo();
+
+        for (let [module, info] of  ngModuleInfo) {
+            const sourceFile = this.project.getSourceFile(info.fileName);
+            const result = ts.transform(sourceFile, [angularDeclarationsTransformer]);
+            const transformed = this.printer.printFile(result.transformed[0]);
+            this.project.updateSourceFile(info.fileName, transformed);
+
+            if (config.addImports) {
+                this.resolveImports(info.fileName);
+                this.organizeImports(info.fileName);
+            }
+        }
 
         // YaY!! All done. Save all files
-        // this.project.persist();
+        this.project.persist();
 
         return this.project;
     }
@@ -126,8 +136,8 @@ export default class RefactorPlugin {
         let tsconfig: any = {
             extends: '',
             compilerOptions: {
-                'rootDir': '.',
-                'baseUrl': '.'
+                rootDir: '.',
+                baseUrl: '.'
             },
             include: ['./**/*.ts']
         };

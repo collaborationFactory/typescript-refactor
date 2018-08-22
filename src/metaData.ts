@@ -1,14 +1,18 @@
-import {NgDeclarations} from './model';
+/**
+ * Exports a global object that will be used to store meta data of plugins
+ */
 
-export let metaData: _MetaData;
+import {INgDeclarations} from './model';
 
-interface ngModuleInfo {
+export let metaData: MetaData;
+
+interface INgModuleInfo {
     fileName: string;
     tsModuleName: string;
     identifier: string;
 }
 
-class _MetaData {
+class MetaData {
 
     /**
      * A map of angular module name to variable identifiers
@@ -28,22 +32,17 @@ class _MetaData {
      *      }
      * }
      */
-    private ngModuleToInfo: Map<string, ngModuleInfo> = new Map<string, ngModuleInfo>();
+    private ngModuleToInfo: Map<string, INgModuleInfo> = new Map<string, INgModuleInfo>();
 
     // angular module to angular declarations
-    private ngDeclarations: Map<string, NgDeclarations> = new Map<string, NgDeclarations>();
+    private ngDeclarations: Map<string, INgDeclarations> = new Map<string, INgDeclarations>();
 
     constructor(private plugin: string) {
     }
 
-    addNgModuleIdentifier(module: string, fileName: string, tsModuleName: string, identifier?: string) {
-        let info = {
-            fileName: fileName,
-            tsModuleName: tsModuleName,
-            identifier: identifier
-        };
-
-        this.ngModuleToInfo.set(module, info)
+    public addNgModuleIdentifier(moduleName: string, fileName: string, tsModuleName: string, identifier?: string): void {
+        const info = {fileName, tsModuleName, identifier};
+        this.ngModuleToInfo.set(moduleName, info);
     }
 
     /**
@@ -52,8 +51,8 @@ class _MetaData {
      * @param identifier
      * @param tsModuleName
      */
-    getNgModuleForIdentifier(identifier: string, tsModuleName?: string): string {
-        for (let [module, info] of this.ngModuleToInfo) {
+    public getNgModuleForIdentifier(identifier: string, tsModuleName?: string): string {
+        for (const [module, info] of this.ngModuleToInfo) {
             if (tsModuleName) {
                 if (info.identifier === identifier && info.tsModuleName === tsModuleName) {
                     return module;
@@ -68,33 +67,31 @@ class _MetaData {
         return null;
     }
 
-    addNgDeclaration(module: string, declarations: NgDeclarations) {
-        let curDeclarations = this.ngDeclarations.get(module);
+    public addNgDeclaration(moduleName: string, declarations: INgDeclarations): void {
+        const curDeclarations = this.ngDeclarations.get(moduleName);
         if (curDeclarations) {
-            for (let declarationsKey in declarations) {
+            Object.keys(declarations).forEach(declarationsKey => {
                 if (curDeclarations[declarationsKey]) {
                     curDeclarations[declarationsKey] = curDeclarations[declarationsKey].concat(declarations[declarationsKey]);
                 } else {
                     curDeclarations[declarationsKey] = declarations[declarationsKey];
                 }
-            }
-            this.ngDeclarations.set(module, curDeclarations)
+            });
+            this.ngDeclarations.set(moduleName, curDeclarations);
         } else {
-            this.ngDeclarations.set(module, declarations);
+            this.ngDeclarations.set(moduleName, declarations);
         }
     }
 
-    getNgModuleInfo() {
+    public getNgModuleInfo(): Map<string, INgModuleInfo> {
         return this.ngModuleToInfo;
     }
 
-    getDeclarationsForModule(module: string) {
-        return this.ngDeclarations.get(module);
+    public getDeclarationsForModule(moduleName: string): INgDeclarations {
+        return this.ngDeclarations.get(moduleName);
     }
 }
 
-
-export function initMetaData(plugin) {
-    metaData = new _MetaData(plugin);
+export function initMetaData(plugin: string): void {
+    metaData = new MetaData(plugin);
 }
-

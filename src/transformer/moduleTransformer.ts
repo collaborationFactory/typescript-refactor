@@ -1,17 +1,12 @@
 import * as ts from 'typescript';
 import * as utils from '../utils';
-import {
-    getAngularDeclaration,
-    getFirstCallExpression,
-    getFirstCallExpressionIdentifier,
-    isAngularExpression
-} from './angularjsUtils';
+import {getAngularDeclaration, getFirstCallExpression, getFirstCallExpressionIdentifier, isAngularExpression} from './angularjsUtils';
 import {addExportToNode} from './exporter';
-import {AngularDeclaration, platformModuleNames} from '../model';
+import {IAngularDeclaration, platformModuleNames} from '../model';
 import {metaData} from '../metaData';
 
 export function moduleTransformer(context: ts.TransformationContext) {
-    let ngDeclarations: Array<AngularDeclaration>;
+    let ngDeclarations: Array<IAngularDeclaration>;
     let sf: ts.SourceFile;
     let addExports = context.getCompilerOptions().addExportsToAll;
     let ngRefs: Set<string>;
@@ -31,7 +26,7 @@ export function moduleTransformer(context: ts.TransformationContext) {
         sourceFile = ts.visitNode(sourceFile, visitSourceFile);
 
         ngDeclarations.forEach(dec => {
-            metaData.addNgDeclaration(dec.module, dec.declarations);
+            metaData.addNgDeclaration(dec.ngModule, dec.declarations);
         });
 
         return sourceFile;
@@ -271,7 +266,7 @@ export function moduleTransformer(context: ts.TransformationContext) {
                 let ngDeclaration = ngDeclarations[i];
                 if (ngDeclaration.declarations.controller) {
                     for (let controller of ngDeclaration.declarations.controller) {
-                        if (controller.function === node.name.text) {
+                        if (controller.func === node.name.text) {
                             // angular controller declaration is using string value
                             if (controller.name.startsWith('\'') || controller.name.endsWith('\'')
                                 || controller.name.startsWith('"') || controller.name.endsWith('"')) {

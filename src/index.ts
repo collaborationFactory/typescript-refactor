@@ -1,20 +1,23 @@
-import Refactor from './refactor';
+/**
+ *  Module entry point
+ */
+
+import Refactor from './Refactor';
 import {detectAndGenerateConfig} from './config';
+import {logger} from './logger';
 
-export const log = require('simple-node-logger').createSimpleLogger();
-
-(function () {
-    let argv = process.argv,
-        configJSON = {
-            verbose: false,
-            plugins: [],
-            createModuleFiles: true,
-            addImports: true,
-            addExports: true
-        };
+(() => {
+    const argv = process.argv;
+    const configJSON = {
+        verbose: false,
+        plugins: [],
+        createModuleFiles: true,
+        addImports: true,
+        addExports: true
+    };
 
     if (argv[2] === '--help' || argv[2] === '?') {
-        console.log('RefactorCplaceTS script for cplace typescript files\n');
+        console.log('Script for refactoring cplace typescript files\n');
         console.log('Available options:');
         console.log('   -verbose', '     Verbose logging');
         console.log('   -noModuleFiles ', '     Creates a file that defines angular module and all related functions(directives, controllers, ...)');
@@ -31,7 +34,7 @@ export const log = require('simple-node-logger').createSimpleLogger();
                 configJSON.verbose = true;
                 break;
             case '-plugins':
-                let plugins = argv[i+1].split(',');
+                const plugins = argv[i + 1].split(',');
                 configJSON.plugins = plugins.map(value => value.trim());
                 i++;
                 break;
@@ -45,12 +48,12 @@ export const log = require('simple-node-logger').createSimpleLogger();
                 configJSON.addExports = false;
                 break;
             default:
-                log.warn('Unrecognised configuration flag ', argv[i], ' ...skipping');
+                logger.warn('Unrecognised configuration flag ', argv[i], ' ...skipping');
         }
     }
 
-    if(configJSON.verbose) {
-        log.setLevel('all');
+    if (configJSON.verbose) {
+        logger.setLevel('all');
     }
 
     configJSON.plugins = ['cf.cplace.cp4p.planning'];
@@ -58,10 +61,8 @@ export const log = require('simple-node-logger').createSimpleLogger();
     configJSON.addImports = true;
 
     const config = detectAndGenerateConfig(configJSON);
-    log.info('Running with configuration ', JSON.stringify(config, null, 4));
+    logger.info('Running with configuration ', JSON.stringify(config, null, 4));
 
-    new Refactor();
+    new Refactor().start();
 
 })();
-
-

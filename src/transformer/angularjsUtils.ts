@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-import {AngularDeclaration} from '../model';
+import {IAngularDeclaration} from '../model';
 import {metaData} from '../metaData';
 
 /**
@@ -29,43 +29,43 @@ export function isAngularExpression(node: ts.ExpressionStatement): boolean {
  * @param node
  * @param tsModuleName
  */
-export function getAngularDeclaration(node: ts.Node, tsModuleName: string): AngularDeclaration {
-    return (function recurseChained(expr: ts.Node): AngularDeclaration {
+export function getAngularDeclaration(node: ts.Node, tsModuleName: string): IAngularDeclaration {
+    return (function recurseChained(expr: ts.Node): IAngularDeclaration {
         if (expr.kind === ts.SyntaxKind.Identifier) {
-            return {} as AngularDeclaration;
+            return {} as IAngularDeclaration;
         }
 
-        let ng = recurseChained((<ts.CallExpression>expr).expression);
+        let dec = recurseChained((<ts.CallExpression>expr).expression);
         if (expr.kind === ts.SyntaxKind.PropertyAccessExpression) {
             let propertyAccessExpression = <ts.PropertyAccessExpression>(expr);
             let identifier = propertyAccessExpression.name as ts.Identifier;
             let parent = expr.parent as ts.CallExpression;
             if (identifier.text === 'module') {
-                ng.module = parent.arguments[0].getText();
-                ng.declarations = {};
+                dec.ngModule = parent.arguments[0].getText();
+                dec.declarations = {};
             } else if (metaData.getNgModuleForIdentifier(propertyAccessExpression.expression.getText(), tsModuleName)) {
-                ng.module = metaData.getNgModuleForIdentifier(propertyAccessExpression.expression.getText(), tsModuleName);
-                ng.declarations = {};
-                ng.declarations[identifier.text] = [];
+                dec.ngModule = metaData.getNgModuleForIdentifier(propertyAccessExpression.expression.getText(), tsModuleName);
+                dec.declarations = {};
+                dec.declarations[identifier.text] = [];
 
                 let decInfo = parent.arguments;
-                ng.declarations[identifier.text].push({
+                dec.declarations[identifier.text].push({
                     name: decInfo[0].getText(),
-                    function: decInfo[1].getText()
+                    func: decInfo[1].getText()
                 });
             } else {
                 let decInfo = parent.arguments;
                 if (decInfo.length === 2) {
-                    ng.declarations = ng.declarations || {};
-                    ng.declarations[identifier.text] = [];
-                    ng.declarations[identifier.text].push({
+                    dec.declarations = dec.declarations || {};
+                    dec.declarations[identifier.text] = [];
+                    dec.declarations[identifier.text].push({
                         name: decInfo[0].getText(),
-                        function: decInfo[1].getText()
+                        func: decInfo[1].getText()
                     });
                 }
             }
         }
-        return ng;
+        return dec;
     })(node);
 }
 

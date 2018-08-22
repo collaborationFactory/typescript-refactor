@@ -1,47 +1,50 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as ts from 'typescript';
-import {log} from './index';
-import {config} from './config';
+import {config, PLATFORM_PLUGIN} from './config';
 import RefactorPlugin from './RefactorPlugin';
 import {Project} from './ts/Project';
 import {LSHost} from './ts/LSHost';
 import {saveFile} from './utils';
+import {logger} from './logger';
 
-export default class RefactorCplaceTS {
-    static PLATFORM_PLUGIN = 'cf.cplace.platform';
+export default class Refactor {
     private platformProject: Project;
-    currentDir: string;
+    private currentDir: string;
 
     constructor() {
         this.currentDir = process.cwd();
-        this.start();
     }
 
-    start() {
+    public static typesAreInstalled(): boolean {
+        // we can add more checks to be 100% sure
+        return fs.existsSync(path.join(config.platformPath, 'assets', 'node_modules', '@types', 'angular', 'index.d.ts'));
+    }
+
+    public start() {
         const platformTsPath = path.join(config.platformPath, 'assets', 'ts');
         // We consider a plugin to be refactored if there is tsconfig.json present in assets/ts folder
         const isPlatformRefactored = fs.existsSync(path.join(platformTsPath, 'tsconfig.json'));
         if (config.isSubRepo && !isPlatformRefactored) {
-            log.fatal('Before refactoring sub-repos make sure that at least platform plugin in main repo is already refactored');
+            logger.fatal('Before refactoring sub-repos make sure that at least platform plugin in main repo is already refactored');
             process.exit();
             return;
         }
 
-        if (!RefactorCplaceTS.typesAreInstalled()) {
-            log.fatal('To begin refactoring install required types in the platform plugin');
+        if (!Refactor.typesAreInstalled()) {
+            logger.fatal('To begin refactoring install required types in the platform plugin');
             process.exit();
             return;
         }
 
         // create base config files
-        this.createBaseConfigFiles();
+        Refactor.createBaseConfigFiles();
 
         // first refactor platform
         if (isPlatformRefactored) {
             this.platformProject = new Project(new LSHost(platformTsPath));
         } else {
-            this.platformProject = new RefactorPlugin(RefactorCplaceTS.PLATFORM_PLUGIN).refactor();
+            this.platformProject = new RefactorPlugin(PLATFORM_PLUGIN).refactor();
         }
 
         for (let i = 0; i < config.plugins.length; i++) {
@@ -49,36 +52,30 @@ export default class RefactorCplaceTS {
         }
     }
 
-    static typesAreInstalled(): boolean {
-        // we can add more checks to be 100% sure
-        return fs.existsSync(path.join(config.platformPath, 'assets', 'node_modules', '@types', 'angular', 'index.d.ts'));
-    }
-
-
     /**
      * We create two base configs
      * 1. tsconfig.settings.json - contains configuration that are common to all
      * 2. tsconfig.base.json - inherits from tsconfig.settings.json and contains configuration that applies to only plugins that depend on platform and/or others
      *
      */
-    createBaseConfigFiles() {
+    private static createBaseConfigFiles() {
         // for tsconfig.settings.json
         let settingsConfig = {
             compilerOptions: {
-                'experimentalDecorators': true,
-                'target': 'es5',
-                'outDir': '../generated_js',
-                'strict': true,
+                experimentalDecorators: true,
+                target: 'es5',
+                outDir: '../generated_js',
+                strict: true,
                 // null and undefined are not assignable to concrete types
-                'strictNullChecks': false,
+                strictNullChecks: false,
                 // any type has to be declared it cannot be inferred
-                'noImplicitAny': false,
+                noImplicitAny: false,
                 // https://github.com/Microsoft/TypeScript/issues/19661
-                'strictFunctionTypes': false,
-                'composite': true,
-                'declaration': true,
-                'declarationMap': true,
-                'sourceMap': true
+                strictFunctionTypes: false,
+                composite: true,
+                declaration: true,
+                declarationMap: true,
+                sourceMap: true
             }
         };
 

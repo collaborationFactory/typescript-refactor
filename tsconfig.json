@@ -1,16 +1,23 @@
 {
   "compilerOptions": {
     "target": "es6",
+    "declaration": true,
     "module": "commonjs",
     "sourceMap": true,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "noImplicitAny": false,
+    "rootDir": "."
   },
   "include": [
     "src/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "build",
+    "dist"
   ],
   "compileOnSave": false
 }
