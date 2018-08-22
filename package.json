@@ -9,7 +9,7 @@
     "run:live": "nodemon --exec './node_modules/.bin/ts-node --cache-directory .tscache' ./src/index.ts"
   },
   "bin": {
-    "cplace-ts-refactor": "dist/src/ts-refactor.js"
+    "cplace-ts-refactor": "dist/src/index.js"
   },
   "author": "collaboration Factory AG",
   "repository": {
@@ -19,14 +19,14 @@
   "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
     "@types/node": "^10.5.4",
+    "del": "^3.0.0",
+    "gulp": "^3.9.1",
+    "gulp-sourcemaps": "^2.6.4",
+    "gulp-typescript": "^5.0.0-alpha.3",
+    "merge2": "^1.2.2",
     "nodemon": "^1.18.3",
-    "ts-loader": "^4.5.0",
     "ts-node": "^7.0.0",
-    "tslint": "^5.11.0",
-    "tslint-microsoft-contrib": "^5.2.0",
-    "typescript": "^3.0.1",
-    "webpack": "^4.17.1",
-    "webpack-cli": "^3.1.0"
+    "typescript": "^3.0.1"
   },
   "dependencies": {
     "mkdirp": "^0.5.1",

@@ -84,7 +84,7 @@ export function angularDeclarationsTransformer(context: ts.TransformationContext
                     angularDeclarationNode = ts.createCall(
                         ts.createPropertyAccess(angularDeclarationNode, ts.createIdentifier(type)),
                         undefined,
-                        [ts.createIdentifier(d.name), ts.createIdentifier(d.function)]
+                        [ts.createIdentifier(d.name), ts.createIdentifier(d.func)]
                     );
                 });
 
