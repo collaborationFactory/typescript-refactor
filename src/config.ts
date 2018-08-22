@@ -72,7 +72,7 @@ function getPluginInRepo(repoPath: string): string[] {
         const filePath = path.join(repoPath, file);
         if (fs.lstatSync(filePath).isDirectory()) {
             const potentialPluginName = path.basename(file);
-            if (potentialPluginName !== PLATFORM_PLUGIN && fs.existsSync(path.join(filePath, `${potentialPluginName}.iml`))) {
+            if (potentialPluginName !== PLATFORM_PLUGIN && fs.existsSync(path.join(filePath, `${potentialPluginName}.iml`)) && fs.existsSync(path.join(filePath, 'assets', 'ts'))) {
                 plugins.push(potentialPluginName);
             }
         }

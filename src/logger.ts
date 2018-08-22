@@ -17,3 +17,10 @@ export function getLogger() {
 
     return logger;
 }
+
+
+export function setVerboseLogging() {
+    if (logger) {
+        logger.setLevel('all');
+    }
+}

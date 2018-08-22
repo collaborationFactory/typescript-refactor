@@ -5,7 +5,7 @@
 
 import Refactor from './Refactor';
 import {detectAndGenerateConfig} from './config';
-import {getLogger} from './logger';
+import {getLogger, setVerboseLogging} from './logger';
 
 let logger = getLogger();
 
@@ -51,17 +51,17 @@ let logger = getLogger();
                 configJSON.addExports = false;
                 break;
             default:
-                logger.warn('Unrecognised configuration flag ', argv[i], ' ...skipping');
+                console.warn('Unrecognised configuration flag ', argv[i], ' ...skipping');
         }
     }
 
     if (configJSON.verbose) {
-        logger.setLevel('all');
+        setVerboseLogging();
     }
 
-    configJSON.plugins = ['cf.cplace.cp4p.planning'];
-    configJSON.addExports = true;
-    configJSON.addImports = true;
+    // configJSON.plugins = ['cf.cplace.cp4p.planning'];
+    // configJSON.addExports = true;
+    // configJSON.addImports = true;
 
     const config = detectAndGenerateConfig(configJSON);
     logger.info('Running with configuration ', JSON.stringify(config, null, 4));
