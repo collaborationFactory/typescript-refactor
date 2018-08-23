@@ -92,6 +92,30 @@ export function moduleTransformer(context: ts.TransformationContext) {
         return node;
     }
 
+    function getNgModuleNameFromIdentifier(node: ts.Identifier) {
+        let str = '';
+        let moduleBlock;
+        if (sf.statements[0].kind === ts.SyntaxKind.ModuleBlock) {
+            moduleBlock = <ts.ModuleBlock>sf.statements[0];
+        } else {
+            let moduleDec = getInnerMostModuleDeclarationFromDottedModule(str, <ts.ModuleDeclaration>sf.statements[0]);
+            moduleBlock = <ts.ModuleBlock>moduleDec.body;
+        }
+
+        let moduleName = node.getText();
+        moduleBlock.statements.find(statement => {
+            if (statement.kind === ts.SyntaxKind.VariableStatement) {
+                let declaration = (<ts.VariableStatement>statement).declarationList.declarations[0] as ts.VariableDeclaration;
+                if (declaration.name.getText() === node.getText()) {
+                    moduleName = declaration.initializer.getText();
+                    return true;
+                }
+            }
+        });
+
+        return moduleName;
+    }
+
     function checkIfAngularModuleDeclaration(node: ts.Node): boolean {
         if (node.kind === ts.SyntaxKind.VariableStatement) {
             let variableStatementNode = <ts.VariableStatement>node;
@@ -107,7 +131,12 @@ export function moduleTransformer(context: ts.TransformationContext) {
                 let callExpression = ts.createExpressionStatement(initializer);
                 if ('angular.module' === getFirstCallExpressionIdentifier(<ts.CallExpression>(callExpression.expression))) {
                     const ngCallExpr = getFirstCallExpression(<ts.CallExpression>initializer);
-                    metaData.addNgModuleIdentifier(ngCallExpr.arguments[0].getText(), sf.fileName, tsModuleName, variableDeclaration.name.getText());
+                    const moduleId = ngCallExpr.arguments[0];
+                    let moduleName = moduleId.getText();
+                    if (moduleId.kind === ts.SyntaxKind.Identifier) {
+                        moduleName = getNgModuleNameFromIdentifier(<ts.Identifier>moduleId);
+                    }
+                    metaData.addNgModuleIdentifier(moduleName, sf.fileName, tsModuleName, variableDeclaration.name.getText(), moduleId.getText());
                     ngDeclarations.push(getAngularDeclaration(callExpression, tsModuleName));
                     return true;
                 }
@@ -117,7 +146,13 @@ export function moduleTransformer(context: ts.TransformationContext) {
             if (expression.kind === ts.SyntaxKind.CallExpression) {
                 let callExpression = ts.createExpressionStatement(expression);
                 if ('angular.module' === getFirstCallExpressionIdentifier(<ts.CallExpression>(callExpression.expression))) {
-                    metaData.addNgModuleIdentifier((<ts.CallExpression>expression).arguments[0].getText(), sf.fileName, tsModuleName);
+                    const moduleId = (<ts.CallExpression>expression).arguments[0];
+                    let moduleName = moduleId.getText();
+                    if (moduleId.kind === ts.SyntaxKind.Identifier) {
+                        moduleName = getNgModuleNameFromIdentifier(<ts.Identifier>moduleId);
+                    }
+
+                    metaData.addNgModuleIdentifier(moduleName, sf.fileName, tsModuleName, undefined, moduleId.getText());
                     ngDeclarations.push(getAngularDeclaration(callExpression, tsModuleName));
                     return true;
                 }

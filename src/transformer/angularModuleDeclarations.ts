@@ -57,7 +57,6 @@ export function angularDeclarationsTransformer(context: ts.TransformationContext
         return node;
     }
 
-
     function createAngularDeclarationNode(node: ts.CallExpression): ts.Expression {
         let firstCallExpression = getFirstCallExpression(node);
         let angularDeclarationNode: ts.Expression;
@@ -71,7 +70,14 @@ export function angularDeclarationsTransformer(context: ts.TransformationContext
             firstCallExpression.arguments
         );
 
-        const declarationsForModule = metaData.getDeclarationsForModule(firstCallExpression.arguments[0].getText());
+        let declarationsForModule;
+        const modId = firstCallExpression.arguments[0].getText();
+        if (firstCallExpression.arguments[0].kind === ts.SyntaxKind.Identifier) {
+            declarationsForModule = metaData.getDeclarationsForModule(metaData.getNgModuleForFileNameAndVarIdentifier(sf.fileName, modId));
+        } else {
+            declarationsForModule = metaData.getDeclarationsForModule(modId);
+        }
+
         // sort so that controllers are before directives
         const declarations: INgDeclarations = Object.keys(declarationsForModule).sort().reduce((acc, currentValue) => {
             acc[currentValue] = declarationsForModule[currentValue];

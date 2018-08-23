@@ -10,6 +10,7 @@ interface INgModuleInfo {
     fileName: string;
     tsModuleName: string;
     identifier: string;
+    varIdentifier: string;
 }
 
 class MetaData {
@@ -40,8 +41,8 @@ class MetaData {
     constructor(private plugin: string) {
     }
 
-    public addNgModuleIdentifier(moduleName: string, fileName: string, tsModuleName: string, identifier?: string): void {
-        const info = {fileName, tsModuleName, identifier};
+    public addNgModuleIdentifier(moduleName: string, fileName: string, tsModuleName: string, identifier?: string, varIdentifier?: string): void {
+        const info = {fileName, tsModuleName, identifier, varIdentifier};
         this.ngModuleToInfo.set(moduleName, info);
     }
 
@@ -67,7 +68,38 @@ class MetaData {
         return null;
     }
 
+    getNgModuleForVarIdentifier(varIdentifier: string, tsModuleName: string): string {
+        for (const [module, info] of this.ngModuleToInfo) {
+            if (tsModuleName) {
+                if (info.varIdentifier === varIdentifier && info.tsModuleName === tsModuleName) {
+                    return module;
+                }
+            } else {
+                if (info.varIdentifier === varIdentifier) {
+                    return module;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    getNgModuleForFileNameAndVarIdentifier(fileName: string, varIdentifier: string): string {
+        for (const [module, info] of this.ngModuleToInfo) {
+            if (info.fileName === fileName && info.varIdentifier === varIdentifier) {
+                return module;
+            }
+        }
+
+        return null;
+
+    }
+
     public addNgDeclaration(moduleName: string, declarations: INgDeclarations): void {
+        if (!declarations) {
+            return;
+        }
+
         const curDeclarations = this.ngDeclarations.get(moduleName);
         if (curDeclarations) {
             Object.keys(declarations).forEach(declarationsKey => {
@@ -90,6 +122,17 @@ class MetaData {
     public getDeclarationsForModule(moduleName: string): INgDeclarations {
         return this.ngDeclarations.get(moduleName);
     }
+
+    toString() {
+        this.ngModuleToInfo.forEach((value, key) => {
+            console.log(key, value);
+        });
+
+        this.ngDeclarations.forEach((value, key) => {
+            console.log(key, value);
+        });
+    }
+
 }
 
 export function initMetaData(plugin: string): void {

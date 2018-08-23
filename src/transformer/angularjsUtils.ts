@@ -41,7 +41,13 @@ export function getAngularDeclaration(node: ts.Node, tsModuleName: string): IAng
             let identifier = propertyAccessExpression.name as ts.Identifier;
             let parent = expr.parent as ts.CallExpression;
             if (identifier.text === 'module') {
-                dec.ngModule = parent.arguments[0].getText();
+                let moduleId = parent.arguments[0];
+                let moduleName = moduleId.getText();
+                if (moduleId.kind === ts.SyntaxKind.Identifier) {
+                    let ngModuleForVarIdentifier = metaData.getNgModuleForVarIdentifier(moduleId.getText(), tsModuleName);
+                    moduleName = ngModuleForVarIdentifier ? ngModuleForVarIdentifier : moduleId.getText();
+                }
+                dec.ngModule = moduleName;
                 dec.declarations = {};
             } else if (metaData.getNgModuleForIdentifier(propertyAccessExpression.expression.getText(), tsModuleName)) {
                 dec.ngModule = metaData.getNgModuleForIdentifier(propertyAccessExpression.expression.getText(), tsModuleName);
