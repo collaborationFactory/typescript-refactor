@@ -19,6 +19,7 @@
   "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
     "@types/node": "^10.5.4",
+    "@types/xml2js": "^0.4.3",
     "del": "^3.0.0",
     "gulp": "^3.9.1",
     "gulp-sourcemaps": "^2.6.4",
@@ -29,6 +30,7 @@
     "typescript": "^3.0.1"
   },
   "dependencies": {
-    "mkdirp": "^0.5.1"
+    "mkdirp": "^0.5.1",
+    "xml2js": "^0.4.19"
   }
 }

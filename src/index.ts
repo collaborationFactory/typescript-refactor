@@ -6,6 +6,7 @@
 import Refactor from './Refactor';
 import {detectAndGenerateConfig} from './config';
 import {Logger} from './logger';
+import CplaceIJModule from './CplaceIJModule';
 
 (() => {
     const argv = process.argv;
@@ -54,7 +55,7 @@ import {Logger} from './logger';
 
     Logger.setVerboseLogging(configJSON.verbose);
 
-    // configJSON.plugins = ['cf.cplace.cp4p.planning'];
+    // configJSON.plugins = [new CplaceIJModule('cf.cplace.simpleBoard')];
     // configJSON.addExports = true;
     // configJSON.addImports = true;
     const config = detectAndGenerateConfig(configJSON);

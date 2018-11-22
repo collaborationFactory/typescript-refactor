@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import {LSHost} from './LSHost';
 import {applyTextChanges} from '../utils';
 
-export class Project {
+export class TSProject {
 
     static DEFAULT_FORMATTING_OPTIONS: ts.FormatCodeSettings = {
         indentSize: 4,
@@ -50,7 +50,7 @@ export class Project {
     }
 
     getCodeFixes(fileName: string, diagnostic: ts.Diagnostic) {
-        return this.service.getCodeFixesAtPosition(fileName, diagnostic.start, diagnostic.start + diagnostic.length, [diagnostic.code], Project.DEFAULT_FORMATTING_OPTIONS, Project.USER_PREFERENCES);
+        return this.service.getCodeFixesAtPosition(fileName, diagnostic.start, diagnostic.start + diagnostic.length, [diagnostic.code], TSProject.DEFAULT_FORMATTING_OPTIONS, TSProject.USER_PREFERENCES);
     }
 
     getSourceFile(fileName: string) {
@@ -80,7 +80,7 @@ export class Project {
         return this.service.organizeImports({
             type: 'file',
             fileName: fileName
-        }, Project.DEFAULT_FORMATTING_OPTIONS, Project.USER_PREFERENCES);
+        }, TSProject.DEFAULT_FORMATTING_OPTIONS, TSProject.USER_PREFERENCES);
     }
 
     getSemanticDiagnostics(fileName: string) {
@@ -94,7 +94,7 @@ export class Project {
     private formatFiles() {
         const projectFiles = this.getProjectFiles();
         projectFiles.forEach(file => {
-            const formattingEdits = this.service.getFormattingEditsForDocument(file, Project.DEFAULT_FORMATTING_OPTIONS);
+            const formattingEdits = this.service.getFormattingEditsForDocument(file, TSProject.DEFAULT_FORMATTING_OPTIONS);
             const text = applyTextChanges(this.getCurrentContents(file), formattingEdits);
             this.updateSourceFile(file, text);
         });

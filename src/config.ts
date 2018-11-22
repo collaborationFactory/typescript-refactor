@@ -5,6 +5,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {Logger} from './logger';
+import CplaceIJModule from './CplaceIJModule';
+
+export const PLATFORM_PLUGIN = 'cf.cplace.platform';
 
 export interface IConfig {
     isSubRepo: boolean;
@@ -18,7 +21,10 @@ export interface IConfig {
     createModuleFiles: true;
 }
 
-export const PLATFORM_PLUGIN = 'cf.cplace.platform';
+/**
+ * This will contain all the available modules with typescript in the current repo
+ */
+export const availableModules = new Map<string, CplaceIJModule>();
 
 /**
  * This config will be used throughout the script
@@ -26,8 +32,9 @@ export const PLATFORM_PLUGIN = 'cf.cplace.platform';
 export let config: IConfig = {} as IConfig;
 
 export function detectAndGenerateConfig(commandLineOptions: any): IConfig {
-    const currentDir = process.cwd();
-
+    let currentDir = process.cwd();
+    // currentDir = '/Users/pragatisureka/software/cf/repos/main';
+    currentDir = '/Users/pragatisureka/software/cf/repos/main';
     config.verbose = commandLineOptions.verbose;
     config.addExports = commandLineOptions.addExports;
     config.addImports = commandLineOptions.addImports;
@@ -54,25 +61,31 @@ export function detectAndGenerateConfig(commandLineOptions: any): IConfig {
     }
     if (error) {
         Logger.fatal('Could not determine path to main repository. Make sure the script is running from either root of "main" repo or from the root of subrepo');
+        process.exit();
+        return;
     }
 
     if (commandLineOptions.plugins && commandLineOptions.plugins.length) {
         config.plugins = commandLineOptions.plugins;
     } else {
-        config.plugins = getPluginInRepo(currentDir);
+        config.plugins = getPluginsInRepo(currentDir);
     }
+
+    config.plugins.forEach((plugin) => {
+        availableModules.set(plugin, new CplaceIJModule(plugin))
+    });
 
     return config;
 }
 
-function getPluginInRepo(repoPath: string): string[] {
+function getPluginsInRepo(repoPath: string) {
     const plugins = [];
     const files = fs.readdirSync(repoPath);
     files.forEach(file => {
         const filePath = path.join(repoPath, file);
         if (fs.lstatSync(filePath).isDirectory()) {
             const potentialPluginName = path.basename(file);
-            if (potentialPluginName !== PLATFORM_PLUGIN && fs.existsSync(path.join(filePath, `${potentialPluginName}.iml`)) && fs.existsSync(path.join(filePath, 'assets', 'ts'))) {
+            if (fs.existsSync(path.join(filePath, `${potentialPluginName}.iml`)) && fs.existsSync(path.join(filePath, 'assets', 'ts'))) {
                 plugins.push(potentialPluginName);
             }
         }

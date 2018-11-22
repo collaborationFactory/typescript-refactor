@@ -1,40 +1,51 @@
 import * as path from 'path';
 import * as ts from 'typescript';
 import {moduleTransformer} from './transformer/moduleTransformer';
-import {config} from './config';
-import {applyTextChanges, copyFolderRecursiveSync, ensureDirExists, saveFile} from './utils';
-import {Project} from './ts/Project';
-import {LSHost} from './ts/LSHost';
-import {initMetaData, metaData} from './metaData';
+import {config, PLATFORM_PLUGIN} from './config';
+import {applyTextChanges, saveFile} from './utils';
+import {TSProject} from './ts/TSProject';
+import {metaData} from './metaData';
 import {angularDeclarationsTransformer} from './transformer/angularModuleDeclarations';
 import {Logger} from './logger';
+import CplaceIJModule from './CplaceIJModule';
 
 export default class RefactorPlugin {
     private readonly tsPath: string;
-    private project: Project;
+    private readonly project: TSProject;
     printer: ts.Printer;
 
-    constructor(private plugin: string, private readonly platformProject?: Project) {
-        this.tsPath = path.join(config.mainRepoPath, plugin, 'assets', 'ts');
-
-        this.printer = ts.createPrinter({
-            removeComments: false,
-        });
-
-        initMetaData(plugin);
-        // this.files = this.getFiles();
+    constructor(private readonly cplaceModule: CplaceIJModule) {
+        console.log(`refactored - ${cplaceModule.moduleName}`);
+        cplaceModule.setRefactored();
     }
+
+    // constructor(private cplaceModule: string, private readonly platformProject?: TSProject) {
+    //     this.tsPath = path.join(config.mainRepoPath, cplaceModule, 'assets', 'ts');
+    //
+    //     this.printer = ts.createPrinter({
+    //         removeComments: false,
+    //     });
+    //
+    //     let additionalFiles = this.platformProject ? this.platformProject.getProjectFiles() : [];
+    //     this.project = new TSProject(new LSHost(this.tsPath, additionalFiles));
+    //     initMetaData(cplaceModule);
+    //     // this.files = this.getFiles();
+    // }
 
     refactor() {
         // copy old ts files to a new folder "ts-old"
-        const target = path.join(config.mainRepoPath, this.plugin, 'assets', 'ts-old');
-        ensureDirExists(target);
-        copyFolderRecursiveSync(this.tsPath, target);
+        const target = path.join(config.mainRepoPath, this.cplaceModule.moduleName, 'assets', 'ts-old');
+        // ensureDirExists(target);
+        // copyFolderRecursiveSync(this.tsPath, target);
         // create a config file with required settings
         this.createConfigFile();
 
-        let additionalFiles = this.platformProject ? this.platformProject.getProjectFiles() : [];
-        this.project = new Project(new LSHost(this.tsPath, additionalFiles));
+        // this.refactorFiles();
+
+        return this.project;
+    }
+
+    private refactorFiles() {
         let projectFiles = this.project.getProjectFiles();
 
         projectFiles.forEach(file => {
@@ -75,11 +86,9 @@ export default class RefactorPlugin {
 
         // YaY!! All done. Save all files
         this.project.persist();
-
-        return this.project;
     }
 
-    resolveImports(fileName: string) {
+    private resolveImports(fileName: string) {
         const semanticDiagnostics = this.project.getSemanticDiagnostics(fileName);
 
         let text: string;
@@ -103,7 +112,7 @@ export default class RefactorPlugin {
         }
     }
 
-    organizeImports(fileName: string) {
+    private organizeImports(fileName: string) {
         const importOrganizeChanges = this.project.getImportOrganizeChanges(fileName);
 
         if (importOrganizeChanges && importOrganizeChanges.length) {
@@ -123,7 +132,7 @@ export default class RefactorPlugin {
      * </code>
      * @param sourceFile
      */
-    shouldRefactor(sourceFile: ts.SourceFile) {
+    private shouldRefactor(sourceFile: ts.SourceFile) {
         let refactor = false;
         sourceFile.forEachChild((node) => {
             if (node.kind === ts.SyntaxKind.ModuleDeclaration) {
@@ -134,21 +143,51 @@ export default class RefactorPlugin {
     }
 
     createConfigFile() {
+        const dependencies = this.cplaceModule.getDependencies();
+
+        let paths = {};
+        let refs = [];
+
+        dependencies.forEach((dep) => {
+            // we do not add platform paths and references here as some modules might not have direct dependency on platform
+            if (dep !== PLATFORM_PLUGIN) {
+                let relPath = `../../../${dep}/assets/ts`;
+                if (config.isSubRepo) {
+                    relPath = '../' + relPath;
+                }
+                paths[`@${dep}/*`] = [relPath + '/*'];
+
+                refs.push({
+                    path: relPath
+                });
+            }
+        });
+
+        //add platform path and reference
+        let platformRelPath = '../../../cf.cplace.platform/assets/ts';
+        if(config.isSubRepo) {
+            platformRelPath = '../' + platformRelPath;
+        }
+        paths[`@${PLATFORM_PLUGIN}/*`] = [platformRelPath + '/*'];
+        refs.unshift({
+            path: platformRelPath
+        });
+
         let tsconfig: any = {
-            extends: '',
+            extends: '../../../tsconfig.base.json',
             compilerOptions: {
                 rootDir: '.',
-                baseUrl: '.'
+                baseUrl: '.',
+                outDir: '../generated_js',
             },
             include: ['./**/*.ts']
         };
 
-        if (this.plugin === 'cf.cplace.platform') {
-            tsconfig.extends = '../../../tsconfig.settings.json';
-        } else {
-            tsconfig.extends = '../../../tsconfig.base.json';
+        if (this.cplaceModule.moduleName !== 'cf.cplace.platform') {
+            tsconfig.compilerOptions.paths = paths;
+            tsconfig.references = refs;
         }
-        const tsconfigPath = path.join(this.tsPath, 'tsconfig.json');
+        const tsconfigPath = path.join(this.cplaceModule.assetsPath, 'ts', 'tsconfig.json');
         saveFile(tsconfigPath, JSON.stringify(tsconfig, null, 4));
     }
 }
