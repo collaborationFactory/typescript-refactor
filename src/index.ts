@@ -4,18 +4,17 @@
  */
 
 import Refactor from './Refactor';
-import {detectAndGenerateConfig} from './config';
+import {detectAndGenerateConfig, IConfig} from './config';
 import {Logger} from './logger';
-import CplaceIJModule from './CplaceIJModule';
 
 (() => {
     const argv = process.argv;
-    const configJSON = {
-        verbose: false,
+    const configJSON: IConfig = {
         plugins: [],
-        createModuleFiles: true,
+        verbose: false,
         addImports: true,
-        addExports: true
+        addExports: true,
+        createModuleFiles: true
     };
 
     if (argv[2] === '--help' || argv[2] === '?') {

@@ -10,15 +10,15 @@ import CplaceIJModule from './CplaceIJModule';
 export const PLATFORM_PLUGIN = 'cf.cplace.platform';
 
 export interface IConfig {
-    isSubRepo: boolean;
-    mainRepoPath: string;
-    platformPath: string;
+    isSubRepo?: boolean;
+    mainRepoPath?: string;
+    platformPath?: string;
     plugins: string[];
 
     verbose: boolean;
-    addImports: true;
-    addExports: true;
-    createModuleFiles: true;
+    addImports: boolean;
+    addExports: boolean;
+    createModuleFiles: boolean;
 }
 
 /**
@@ -32,9 +32,7 @@ export const availableModules = new Map<string, CplaceIJModule>();
 export let config: IConfig = {} as IConfig;
 
 export function detectAndGenerateConfig(commandLineOptions: any): IConfig {
-    let currentDir = process.cwd();
-    // currentDir = '/Users/pragatisureka/software/cf/repos/main';
-    currentDir = '/Users/pragatisureka/software/cf/repos/main';
+    const currentDir = process.cwd();
     config.verbose = commandLineOptions.verbose;
     config.addExports = commandLineOptions.addExports;
     config.addImports = commandLineOptions.addImports;
