@@ -26,18 +26,10 @@ export interface IConfig {
  */
 export const availableModules = new Map<string, CplaceIJModule>();
 
-/**
- * This config will be used throughout the script
- */
-export let config: IConfig = {} as IConfig;
+export function detectAndGenerateConfig(commandLineOptions: IConfig): IConfig {
+    const config: IConfig = {...commandLineOptions};
 
-export function detectAndGenerateConfig(commandLineOptions: any): IConfig {
     const currentDir = process.cwd();
-    config.verbose = commandLineOptions.verbose;
-    config.addExports = commandLineOptions.addExports;
-    config.addImports = commandLineOptions.addImports;
-    config.createModuleFiles = commandLineOptions.createModuleFiles;
-
     let error = false;
     let potentialPlatformDirectory = path.join(currentDir, PLATFORM_PLUGIN);
     if (path.basename(currentDir) === 'main' && fs.lstatSync(potentialPlatformDirectory).isDirectory()) {
@@ -76,7 +68,7 @@ export function detectAndGenerateConfig(commandLineOptions: any): IConfig {
     return config;
 }
 
-function getPluginsInRepo(repoPath: string) {
+function getPluginsInRepo(repoPath: string): string[] {
     const plugins = [];
     const files = fs.readdirSync(repoPath);
     files.forEach(file => {

@@ -60,6 +60,6 @@ import {Logger} from './logger';
     const config = detectAndGenerateConfig(configJSON);
     Logger.log('Running with configuration ', JSON.stringify(config, null, 4));
 
-    new Refactor().start();
+    new Refactor(config).start();
 
 })();

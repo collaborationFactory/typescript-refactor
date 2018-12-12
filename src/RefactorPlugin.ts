@@ -1,8 +1,8 @@
 import * as path from 'path';
 import * as ts from 'typescript';
 import {moduleTransformer} from './transformer/moduleTransformer';
-import {config, PLATFORM_PLUGIN} from './config';
-import {applyTextChanges, saveFile} from './utils';
+import {PLATFORM_PLUGIN} from './config';
+import {applyTextChanges, copyFolderRecursiveSync, ensureDirExists, saveFile} from './utils';
 import {TSProject} from './ts/TSProject';
 import {metaData} from './metaData';
 import {angularDeclarationsTransformer} from './transformer/angularModuleDeclarations';
@@ -15,8 +15,7 @@ export default class RefactorPlugin {
     printer: ts.Printer;
 
     constructor(private readonly cplaceModule: CplaceIJModule) {
-        console.log(`refactored - ${cplaceModule.moduleName}`);
-        cplaceModule.setRefactored();
+        this.tsPath = path.join(this.cplaceModule.assetsPath, 'ts');
     }
 
     // constructor(private cplaceModule: string, private readonly platformProject?: TSProject) {
@@ -34,13 +33,16 @@ export default class RefactorPlugin {
 
     refactor() {
         // copy old ts files to a new folder "ts-old"
-        const target = path.join(config.mainRepoPath, this.cplaceModule.moduleName, 'assets', 'ts-old');
-        // ensureDirExists(target);
-        // copyFolderRecursiveSync(this.tsPath, target);
+        const target = path.join(this.cplaceModule.assetsPath, 'ts-old');
+        ensureDirExists(target);
+        copyFolderRecursiveSync(this.tsPath, target);
         // create a config file with required settings
         this.createConfigFile();
 
-        // this.refactorFiles();
+        this.refactorFiles();
+
+        console.log(`refactored - ${this.cplaceModule.moduleName}`);
+        this.cplaceModule.setRefactored();
 
         return this.project;
     }
@@ -152,7 +154,7 @@ export default class RefactorPlugin {
             // we do not add platform paths and references here as some modules might not have direct dependency on platform
             if (dep !== PLATFORM_PLUGIN) {
                 let relPath = `../../../${dep}/assets/ts`;
-                if (config.isSubRepo) {
+                if (this.cplaceModule.isSubRepo) {
                     relPath = '../' + relPath;
                 }
                 paths[`@${dep}/*`] = [relPath + '/*'];
@@ -165,7 +167,8 @@ export default class RefactorPlugin {
 
         //add platform path and reference
         let platformRelPath = '../../../cf.cplace.platform/assets/ts';
-        if(config.isSubRepo) {
+        // TODO: path is not correct for subrepo
+        if (this.cplaceModule.isSubRepo) {
             platformRelPath = '../' + platformRelPath;
         }
         paths[`@${PLATFORM_PLUGIN}/*`] = [platformRelPath + '/*'];
@@ -173,6 +176,7 @@ export default class RefactorPlugin {
             path: platformRelPath
         });
 
+        // TODO: path is not correct for subrepo
         let tsconfig: any = {
             extends: '../../../tsconfig.base.json',
             compilerOptions: {
@@ -187,7 +191,7 @@ export default class RefactorPlugin {
             tsconfig.compilerOptions.paths = paths;
             tsconfig.references = refs;
         }
-        const tsconfigPath = path.join(this.cplaceModule.assetsPath, 'ts', 'tsconfig.json');
+        const tsconfigPath = path.join(this.tsPath, 'tsconfig.json');
         saveFile(tsconfigPath, JSON.stringify(tsconfig, null, 4));
     }
 }
