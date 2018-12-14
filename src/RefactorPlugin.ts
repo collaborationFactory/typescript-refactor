@@ -4,34 +4,44 @@ import {moduleTransformer} from './transformer/moduleTransformer';
 import {PLATFORM_PLUGIN} from './config';
 import {applyTextChanges, copyFolderRecursiveSync, ensureDirExists, saveFile} from './utils';
 import {TSProject} from './ts/TSProject';
-import {metaData} from './metaData';
 import {angularDeclarationsTransformer} from './transformer/angularModuleDeclarations';
 import {Logger} from './logger';
 import CplaceIJModule from './CplaceIJModule';
+import {LSHost} from './ts/LSHost';
+import {MetaData} from './metaData';
+
+export interface IRefactoringOptions {
+    addImports: boolean;
+    addExports: boolean;
+}
 
 export default class RefactorPlugin {
     private readonly tsPath: string;
-    private readonly project: TSProject;
-    printer: ts.Printer;
 
-    constructor(private readonly cplaceModule: CplaceIJModule) {
+    private project: TSProject;
+    private printer: ts.Printer;
+
+    constructor(private readonly cplaceModule: CplaceIJModule, private readonly options: IRefactoringOptions) {
         this.tsPath = path.join(this.cplaceModule.assetsPath, 'ts');
     }
 
     // constructor(private cplaceModule: string, private readonly platformProject?: TSProject) {
     //     this.tsPath = path.join(config.mainRepoPath, cplaceModule, 'assets', 'ts');
     //
-    //     this.printer = ts.createPrinter({
-    //         removeComments: false,
-    //     });
-    //
-    //     let additionalFiles = this.platformProject ? this.platformProject.getProjectFiles() : [];
-    //     this.project = new TSProject(new LSHost(this.tsPath, additionalFiles));
-    //     initMetaData(cplaceModule);
-    //     // this.files = this.getFiles();
     // }
 
-    refactor() {
+    initialize(): void {
+        this.printer = ts.createPrinter({
+            removeComments: false
+        });
+
+        //let additionalFiles = this.platformProject ? this.platformProject.getProjectFiles() : [];
+        this.project = new TSProject(new LSHost(this.tsPath, []));
+        // initMetaData(cplaceModule);
+        // this.files = this.getFiles();
+    }
+
+    refactor(): void {
         // copy old ts files to a new folder "ts-old"
         const target = path.join(this.cplaceModule.assetsPath, 'ts-old');
         ensureDirExists(target);
@@ -43,11 +53,9 @@ export default class RefactorPlugin {
 
         console.log(`refactored - ${this.cplaceModule.moduleName}`);
         this.cplaceModule.setRefactored();
-
-        return this.project;
     }
 
-    private refactorFiles() {
+    private refactorFiles(): void {
         let projectFiles = this.project.getProjectFiles();
 
         projectFiles.forEach(file => {
@@ -58,12 +66,12 @@ export default class RefactorPlugin {
                     return;
                 }
                 if (this.shouldRefactor(sourceFile)) {
-                    const result = ts.transform(sourceFile, [moduleTransformer], {addExportsToAll: config.addExports});
+                    const result = ts.transform(sourceFile, [moduleTransformer], {addExportsToAll: this.options.addExports});
                     const transformed = this.printer.printFile(result.transformed[0]);
                     this.project.updateSourceFile(file, transformed);
                 }
 
-                if (config.addImports) {
+                if (this.options.addImports) {
                     this.resolveImports(file);
                     this.organizeImports(file);
                 }
@@ -72,7 +80,7 @@ export default class RefactorPlugin {
             }
         });
 
-        const ngModuleInfo = metaData.getNgModuleInfo();
+        const ngModuleInfo = MetaData.get().getNgModuleInfo();
 
         for (let [module, info] of  ngModuleInfo) {
             const sourceFile = this.project.getSourceFile(info.fileName);
@@ -80,7 +88,7 @@ export default class RefactorPlugin {
             const transformed = this.printer.printFile(result.transformed[0]);
             this.project.updateSourceFile(info.fileName, transformed);
 
-            if (config.addImports) {
+            if (this.options.addImports) {
                 this.resolveImports(info.fileName);
                 this.organizeImports(info.fileName);
             }

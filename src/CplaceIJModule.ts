@@ -16,17 +16,6 @@ export default class CplaceIJModule {
         this.dependencies = this.findDependenciesWithTs();
     }
 
-    allDependenciesAlreadyRefactored(availableModules: Map<string, CplaceIJModule>) {
-        for (let i = 0; i < this.dependencies.length; i++) {
-            const dependency = availableModules.get(this.dependencies[i]);
-            if (!dependency.isRefactored()) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     getDependencies() {
         return this.dependencies;
     }

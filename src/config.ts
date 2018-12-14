@@ -5,7 +5,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {Logger} from './logger';
-import CplaceIJModule from './CplaceIJModule';
 
 export const PLATFORM_PLUGIN = 'cf.cplace.platform';
 
@@ -20,11 +19,6 @@ export interface IConfig {
     addExports: boolean;
     createModuleFiles: boolean;
 }
-
-/**
- * This will contain all the available modules with typescript in the current repo
- */
-export const availableModules = new Map<string, CplaceIJModule>();
 
 export function detectAndGenerateConfig(commandLineOptions: IConfig): IConfig {
     const config: IConfig = {...commandLineOptions};
@@ -60,10 +54,6 @@ export function detectAndGenerateConfig(commandLineOptions: IConfig): IConfig {
     } else {
         config.plugins = getPluginsInRepo(currentDir);
     }
-
-    config.plugins.forEach((plugin) => {
-        availableModules.set(plugin, new CplaceIJModule(plugin))
-    });
 
     return config;
 }

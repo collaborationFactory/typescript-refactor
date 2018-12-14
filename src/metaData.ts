@@ -4,16 +4,15 @@
 
 import {INgDeclarations} from './model';
 
-export let metaData: MetaData;
-
-interface INgModuleInfo {
+export interface INgModuleInfo {
     fileName: string;
     tsModuleName: string;
     identifier: string;
     varIdentifier: string;
 }
 
-class MetaData {
+export class MetaData {
+    private static readonly INSTANCE = new MetaData();
 
     /**
      * A map of angular module name to variable identifiers
@@ -38,7 +37,11 @@ class MetaData {
     // angular module to angular declarations
     private ngDeclarations: Map<string, INgDeclarations> = new Map<string, INgDeclarations>();
 
-    constructor(private plugin: string) {
+    private constructor() {
+    }
+
+    public static get(): MetaData {
+        return this.INSTANCE;
     }
 
     public addNgModuleIdentifier(moduleName: string, fileName: string, tsModuleName: string, identifier?: string, varIdentifier?: string): void {
@@ -133,8 +136,4 @@ class MetaData {
         });
     }
 
-}
-
-export function initMetaData(plugin: string): void {
-    metaData = new MetaData(plugin);
 }

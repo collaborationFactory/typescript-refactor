@@ -3,7 +3,7 @@ import * as utils from '../utils';
 import {getAngularDeclaration, getFirstCallExpression, getFirstCallExpressionIdentifier, isAngularExpression} from './angularjsUtils';
 import {addExportToNode} from './exporter';
 import {IAngularDeclaration, platformModuleNames} from '../model';
-import {metaData} from '../metaData';
+import {MetaData} from '../metaData';
 
 export function moduleTransformer(context: ts.TransformationContext) {
     let ngDeclarations: Array<IAngularDeclaration>;
@@ -26,14 +26,14 @@ export function moduleTransformer(context: ts.TransformationContext) {
         sourceFile = ts.visitNode(sourceFile, visitSourceFile);
 
         ngDeclarations.forEach(dec => {
-            metaData.addNgDeclaration(dec.ngModule, dec.declarations);
+            MetaData.get().addNgDeclaration(dec.ngModule, dec.declarations);
         });
 
         return sourceFile;
     }
 
     /**
-     * Should only have a top level module declaration of the form cf.cpalce...
+     * Should only have a top level module declaration of the form cf.cplace...
      */
     function visitSourceFile(node: ts.SourceFile) {
         let statements: ts.NodeArray<ts.Statement> = ts.visitLexicalEnvironment(node.statements, sourceElementVisitor, context, 0, false);
@@ -136,7 +136,7 @@ export function moduleTransformer(context: ts.TransformationContext) {
                     if (moduleId.kind === ts.SyntaxKind.Identifier) {
                         moduleName = getNgModuleNameFromIdentifier(<ts.Identifier>moduleId);
                     }
-                    metaData.addNgModuleIdentifier(moduleName, sf.fileName, tsModuleName, variableDeclaration.name.getText(), moduleId.getText());
+                    MetaData.get().addNgModuleIdentifier(moduleName, sf.fileName, tsModuleName, variableDeclaration.name.getText(), moduleId.getText());
                     ngDeclarations.push(getAngularDeclaration(callExpression, tsModuleName));
                     return true;
                 }
@@ -152,7 +152,7 @@ export function moduleTransformer(context: ts.TransformationContext) {
                         moduleName = getNgModuleNameFromIdentifier(<ts.Identifier>moduleId);
                     }
 
-                    metaData.addNgModuleIdentifier(moduleName, sf.fileName, tsModuleName, undefined, moduleId.getText());
+                    MetaData.get().addNgModuleIdentifier(moduleName, sf.fileName, tsModuleName, undefined, moduleId.getText());
                     ngDeclarations.push(getAngularDeclaration(callExpression, tsModuleName));
                     return true;
                 }

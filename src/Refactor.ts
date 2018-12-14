@@ -14,7 +14,10 @@ export default class Refactor {
 
     public start() {
         this.config.plugins.forEach(pluginName => {
-            const module = new CplaceIJModule(pluginName, moduleName => this.config.plugins.indexOf(moduleName) > -1);
+            const module = new CplaceIJModule(
+                pluginName, this.config.isSubRepo,
+                moduleName => this.config.plugins.indexOf(moduleName) > -1
+            );
             this.availableModules.set(pluginName, module);
         });
 
@@ -43,16 +46,19 @@ export default class Refactor {
 
     }
 
-    private refactorPlugin(plugin: CplaceIJModule) {
-        if (!plugin.allDependenciesAlreadyRefactored(this.availableModules)) {
-            const dependencies = plugin.getDependencies();
-            dependencies.forEach((dep) => {
-                this.refactorPlugin(this.availableModules.get(dep));
-            })
-        }
+    private refactorPlugin(plugin: CplaceIJModule): void {
+        plugin.getDependencies()
+            .map(d => this.availableModules.get(d))
+            .filter(dep => !dep.isRefactored())
+            .forEach(dep => this.refactorPlugin(dep));
 
         if (!plugin.isRefactored()) {
-            new RefactorPlugin(plugin).refactor();
+            const pluginRefactor = new RefactorPlugin(plugin, {
+                addImports: this.config.addImports,
+                addExports: this.config.addExports
+            });
+            pluginRefactor.initialize();
+            pluginRefactor.refactor();
         }
     }
 
