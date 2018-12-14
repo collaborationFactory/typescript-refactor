@@ -8,8 +8,10 @@ import {IConfig} from './config';
 
 export default class Refactor {
     private readonly availableModules = new Map<string, CplaceIJModule>();
+    private readonly relativePathToMain: string;
 
     constructor(private readonly config: IConfig) {
+        this.relativePathToMain = this.config.isSubRepo ? '../main' : '';
     }
 
     public start() {
@@ -53,10 +55,13 @@ export default class Refactor {
             .forEach(dep => this.refactorPlugin(dep));
 
         if (!plugin.isRefactored()) {
-            const pluginRefactor = new RefactorPlugin(plugin, {
-                addImports: this.config.addImports,
-                addExports: this.config.addExports
-            });
+            const pluginRefactor = new RefactorPlugin(
+                plugin, this.relativePathToMain,
+                {
+                    addImports: this.config.addImports,
+                    addExports: this.config.addExports
+                }
+            );
             pluginRefactor.initialize();
             pluginRefactor.refactor();
         }

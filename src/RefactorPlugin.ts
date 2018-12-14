@@ -21,7 +21,9 @@ export default class RefactorPlugin {
     private project: TSProject;
     private printer: ts.Printer;
 
-    constructor(private readonly cplaceModule: CplaceIJModule, private readonly options: IRefactoringOptions) {
+    constructor(private readonly cplaceModule: CplaceIJModule,
+                private readonly relativeRepoPathToMain: string,
+                private readonly options: IRefactoringOptions) {
         this.tsPath = path.join(this.cplaceModule.assetsPath, 'ts');
     }
 
@@ -153,17 +155,19 @@ export default class RefactorPlugin {
     }
 
     createConfigFile() {
+        const relativePathToRepoRoot = '../../..';
         const dependencies = this.cplaceModule.getDependencies();
 
         let paths = {};
         let refs = [];
 
+        // TODO what to do with other dependencies -> check their repos, cross repo references!
         dependencies.forEach((dep) => {
             // we do not add platform paths and references here as some modules might not have direct dependency on platform
             if (dep !== PLATFORM_PLUGIN) {
-                let relPath = `../../../${dep}/assets/ts`;
+                let relPath = path.join(relativePathToRepoRoot, `${dep}/assets/ts`);
                 if (this.cplaceModule.isSubRepo) {
-                    relPath = '../' + relPath;
+                    relPath = '../' + relPath; // TODO: add cross-repo name if is external reference!!
                 }
                 paths[`@${dep}/*`] = [relPath + '/*'];
 
@@ -174,19 +178,14 @@ export default class RefactorPlugin {
         });
 
         //add platform path and reference
-        let platformRelPath = '../../../cf.cplace.platform/assets/ts';
-        // TODO: path is not correct for subrepo
-        if (this.cplaceModule.isSubRepo) {
-            platformRelPath = '../' + platformRelPath;
-        }
-        paths[`@${PLATFORM_PLUGIN}/*`] = [platformRelPath + '/*'];
+        const relPathToPlatformTsAssets = path.join(relativePathToRepoRoot, this.relativeRepoPathToMain, `${PLATFORM_PLUGIN}/assets/ts`);
+        paths[`@${PLATFORM_PLUGIN}/*`] = [relPathToPlatformTsAssets + '/*'];
         refs.unshift({
-            path: platformRelPath
+            path: relPathToPlatformTsAssets
         });
 
-        // TODO: path is not correct for subrepo
-        let tsconfig: any = {
-            extends: '../../../tsconfig.base.json',
+        const tsconfig: any = {
+            extends: path.join(relativePathToRepoRoot, this.relativeRepoPathToMain, 'tsconfig.base.json'),
             compilerOptions: {
                 rootDir: '.',
                 baseUrl: '.',
@@ -195,10 +194,11 @@ export default class RefactorPlugin {
             include: ['./**/*.ts']
         };
 
-        if (this.cplaceModule.moduleName !== 'cf.cplace.platform') {
+        if (this.cplaceModule.moduleName !== PLATFORM_PLUGIN) {
             tsconfig.compilerOptions.paths = paths;
             tsconfig.references = refs;
         }
+
         const tsconfigPath = path.join(this.tsPath, 'tsconfig.json');
         saveFile(tsconfigPath, JSON.stringify(tsconfig, null, 4));
     }

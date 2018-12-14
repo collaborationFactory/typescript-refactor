@@ -29,7 +29,7 @@ export class TSProject {
 
     static USER_PREFERENCES: ts.UserPreferences = {
         quotePreference: 'single',
-        importModuleSpecifierPreference: 'non-relative'
+        importModuleSpecifierPreference: 'non-relative' // TODO: we have to put the './' as prefix to relative imports...
     };
 
     service: ts.LanguageService;
