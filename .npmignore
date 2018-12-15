@@ -2,11 +2,7 @@ node_modules/
 *.log
 *.tgz
 *.iml
-
-test/
-gulpfile.js
+.idea/
 tsconfig.json
 tslint.json
-typings.json
-typings
-dist/test
+src/
