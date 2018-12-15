@@ -1,6 +1,6 @@
 {
   "name": "@cplace/ts-refactor",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Utility to automate some trivial tasks in refactoring typescript files to ES6 modules style",
   "main": "dist/index.js",
   "scripts": {
