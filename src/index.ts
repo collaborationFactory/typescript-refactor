@@ -54,11 +54,8 @@ import {Logger} from './logger';
 
     Logger.setVerboseLogging(configJSON.verbose);
 
-    // configJSON.plugins = [new CplaceIJModule('cf.cplace.simpleBoard')];
-    // configJSON.addExports = true;
-    // configJSON.addImports = true;
     const config = detectAndGenerateConfig(configJSON);
-    Logger.log('Running with configuration ', JSON.stringify(config, null, 4));
+    Logger.debug('Running with configuration ', JSON.stringify(config, null, 4));
 
     new Refactor(config).start();
 

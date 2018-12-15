@@ -86,4 +86,8 @@ export class LSHost implements ts.LanguageServiceHost {
 
         return this.parsedConfig;
     }
+
+    readDirectory = ts.sys.readDirectory;
+    readFile = ts.sys.readFile;
+    fileExists = ts.sys.fileExists;
 }

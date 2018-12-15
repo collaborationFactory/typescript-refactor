@@ -3,6 +3,7 @@ import {ImlParser} from './iml-parser';
 import * as fs from "fs";
 
 export default class CplaceIJModule {
+    public readonly pluginPath: string;
     public readonly assetsPath: string;
     private readonly dependencies: string[];
 
@@ -11,6 +12,7 @@ export default class CplaceIJModule {
     constructor(public readonly moduleName: string,
                 public readonly isSubRepo: boolean,
                 private readonly isLocalDependency: (moduleName: string) => boolean) {
+        this.pluginPath = path.resolve(process.cwd(), this.moduleName);
         this.assetsPath = path.join(process.cwd(), this.moduleName, 'assets');
         this.refactored = this.checkTsconfig();
         this.dependencies = this.findDependenciesWithTs();
@@ -29,7 +31,7 @@ export default class CplaceIJModule {
     }
 
     private findDependenciesWithTs() {
-        let imlPath = path.join(process.cwd(), this.moduleName, `${this.moduleName}.iml`);
+        let imlPath = path.join(this.pluginPath, `${this.moduleName}.iml`);
         let referencedModules = new ImlParser(imlPath).getReferencedModules();
         return referencedModules.filter((moduleName) => this.isLocalDependency(moduleName));
     }

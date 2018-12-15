@@ -17,7 +17,7 @@ export default class Refactor {
     public start() {
         this.config.plugins.forEach(pluginName => {
             const module = new CplaceIJModule(
-                pluginName, this.config.isSubRepo,
+                pluginName, this.config.isSubRepo, // TODO: subrepo not true if across repo dependencies
                 moduleName => this.config.plugins.indexOf(moduleName) > -1
             );
             this.availableModules.set(pluginName, module);
@@ -42,7 +42,7 @@ export default class Refactor {
         // create base config files
         // Refactor.createBaseConfigFiles();
 
-        for (let plugin of this.availableModules.values()) {
+        for (const plugin of this.availableModules.values()) {
             this.refactorPlugin(plugin);
         }
 
@@ -62,7 +62,7 @@ export default class Refactor {
                     addExports: this.config.addExports
                 }
             );
-            pluginRefactor.initialize();
+            pluginRefactor.prepareFiles();
             pluginRefactor.refactor();
         }
     }
