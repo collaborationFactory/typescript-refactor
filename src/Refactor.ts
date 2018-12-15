@@ -81,7 +81,6 @@ export default class Refactor {
             }
 
             const depPath = this.resolveModulePath(depName);
-            console.log(depPath);
             const dep = new CplaceIJModule(depName, depPath);
             this.availableModules.set(depName, dep);
             this.resolveDependencies(dep);
