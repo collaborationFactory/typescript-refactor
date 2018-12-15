@@ -9,6 +9,8 @@ import {Logger} from './logger';
 export const PLATFORM_PLUGIN = 'cf.cplace.platform';
 
 export interface IConfig {
+    repo: string;
+    repoDependencies: string[];
     isSubRepo?: boolean;
     mainRepoPath?: string;
     platformPath?: string;
@@ -30,7 +32,7 @@ export function detectAndGenerateConfig(commandLineOptions: IConfig): IConfig {
         config.isSubRepo = false;
         config.mainRepoPath = currentDir;
         config.platformPath = potentialPlatformDirectory;
-    } else if (fs.existsSync(path.join(currentDir, '/parent-repos.json'))) {
+    } else if (fs.existsSync(path.join(currentDir, 'parent-repos.json'))) {
         config.isSubRepo = true;
         const potentialMainDirectory = path.join(currentDir, '..', 'main');
         potentialPlatformDirectory = path.join(potentialMainDirectory, PLATFORM_PLUGIN);
@@ -40,6 +42,9 @@ export function detectAndGenerateConfig(commandLineOptions: IConfig): IConfig {
         } else {
             error = true;
         }
+
+        const parentReposContent = fs.readFileSync(path.join(currentDir, 'parent-repos.json'), 'utf8');
+        config.repoDependencies = Object.keys(JSON.parse(parentReposContent));
     } else {
         error = true;
     }

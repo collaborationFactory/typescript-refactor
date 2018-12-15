@@ -6,10 +6,13 @@
 import Refactor from './Refactor';
 import {detectAndGenerateConfig, IConfig} from './config';
 import {Logger} from './logger';
+import * as path from 'path';
 
 (() => {
     const argv = process.argv;
     const configJSON: IConfig = {
+        repo: path.basename(process.cwd()),
+        repoDependencies: [],
         plugins: [],
         verbose: false,
         addImports: true,

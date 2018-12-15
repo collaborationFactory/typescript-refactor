@@ -3,19 +3,20 @@ import {ImlParser} from './iml-parser';
 import * as fs from "fs";
 
 export default class CplaceIJModule {
-    public readonly pluginPath: string;
+    public readonly repo: string;
+    public readonly isInSubRepo: boolean;
     public readonly assetsPath: string;
     private readonly dependencies: string[];
 
     private refactored: boolean;
 
-    constructor(public readonly moduleName: string,
-                public readonly isSubRepo: boolean,
-                private readonly isLocalDependency: (moduleName: string) => boolean) {
-        this.pluginPath = path.resolve(process.cwd(), this.moduleName);
-        this.assetsPath = path.join(process.cwd(), this.moduleName, 'assets');
-        this.refactored = this.checkTsconfig();
-        this.dependencies = this.findDependenciesWithTs();
+    constructor(public readonly pluginName: string,
+                public readonly pluginPath: string) {
+        this.repo = path.basename(path.dirname(pluginPath));
+        this.isInSubRepo = this.repo !== 'main';
+        this.assetsPath = path.join(this.pluginPath, 'assets');
+        this.refactored = this.checkTsConfig();
+        this.dependencies = this.findDependencies();
     }
 
     getDependencies() {
@@ -30,16 +31,15 @@ export default class CplaceIJModule {
         this.refactored = true;
     }
 
-    private findDependenciesWithTs() {
-        let imlPath = path.join(this.pluginPath, `${this.moduleName}.iml`);
-        let referencedModules = new ImlParser(imlPath).getReferencedModules();
-        return referencedModules.filter((moduleName) => this.isLocalDependency(moduleName));
+    private findDependencies() {
+        let imlPath = path.join(this.pluginPath, `${this.pluginName}.iml`);
+        return new ImlParser(imlPath).getReferencedModules();
     }
 
     /**
      * we assume a plugin to be refactored is tsconfig.json is present in assets folder
      */
-    private checkTsconfig() {
-        return fs.existsSync(path.join(this.assetsPath, 'tsconfig.json'));
+    private checkTsConfig() {
+        return fs.existsSync(path.resolve(this.assetsPath, 'ts', 'tsconfig.json'));
     }
 }

@@ -26,6 +26,7 @@ export default class RefactorPlugin {
 
     constructor(private readonly cplaceModule: CplaceIJModule,
                 private readonly relativeRepoPathToMain: string,
+                private readonly allModules: Map<string, CplaceIJModule>,
                 private readonly options: IRefactoringOptions) {
         this.tsPath = path.join(this.cplaceModule.assetsPath, 'ts');
         this.printer = ts.createPrinter({
@@ -50,12 +51,12 @@ export default class RefactorPlugin {
         process.chdir(path.resolve(this.cplaceModule.assetsPath, 'ts'));
 
         try {
-            Logger.log('Refactoring', this.cplaceModule.moduleName);
+            Logger.log('Refactoring', this.cplaceModule.pluginName);
             this.filesWithErrors = new Set();
 
             this.refactorFiles();
 
-            Logger.success('Successfully refactored', this.cplaceModule.moduleName);
+            Logger.success('Successfully refactored', this.cplaceModule.pluginName);
             this.cplaceModule.setRefactored();
         } finally {
             process.chdir(cwd);
@@ -184,39 +185,27 @@ export default class RefactorPlugin {
         let paths = {};
         let refs = [];
 
-        // TODO what to do with other dependencies -> check their repos, cross repo references!
         dependencies.forEach((dep) => {
-            // we do not add platform paths and references here as some modules might not have direct dependency on platform
-            if (dep !== PLATFORM_PLUGIN) {
-                let relPath = path.join(relativePathToRepoRoot, `${dep}/assets/ts`);
-                if (this.cplaceModule.isSubRepo) {
-                    relPath = '../' + relPath; // TODO: add cross-repo name if is external reference!!
-                }
-                paths[`@${dep}/*`] = [relPath + '/*'];
+            const module = this.allModules.get(dep);
+            const relPathToModule = module.repo === this.cplaceModule.repo
+                ? relativePathToRepoRoot
+                : path.join(relativePathToRepoRoot, '..', module.repo);
 
-                refs.push({
-                    path: relPath
-                });
-            }
+            let relPath = path.join(relPathToModule, `${dep}/assets/ts`);
+            paths[`@${dep}/*`] = [relPath + '/*'];
+            refs.push({
+                path: relPath
+            });
         });
 
-        if (this.cplaceModule.moduleName !== PLATFORM_PLUGIN) {
-            //add platform path and reference
-            const relPathToPlatformTsAssets = path.join(relativePathToRepoRoot, this.relativeRepoPathToMain, `${PLATFORM_PLUGIN}/assets/ts`);
-            paths[`@${PLATFORM_PLUGIN}/*`] = [relPathToPlatformTsAssets + '/*'];
-            refs.unshift({
-                path: relPathToPlatformTsAssets
-            });
-
-            if (this.cplaceModule.isSubRepo) {
-                paths = {
-                    ...paths,
-                    '*': [
-                        '*',
-                        `${relativePathToRepoRoot}/../main/node_modules/@types/*`
-                    ]
-                };
-            }
+        if (this.cplaceModule.isInSubRepo) {
+            paths = {
+                ...paths,
+                '*': [
+                    '*',
+                    `${relativePathToRepoRoot}/../main/node_modules/@types/*`
+                ]
+            };
         }
 
         const tsconfig: any = {
@@ -229,7 +218,7 @@ export default class RefactorPlugin {
             include: ['./**/*.ts']
         };
 
-        if (this.cplaceModule.moduleName !== PLATFORM_PLUGIN) {
+        if (this.cplaceModule.pluginName !== PLATFORM_PLUGIN) {
             tsconfig.compilerOptions.paths = paths;
             tsconfig.references = refs;
         }

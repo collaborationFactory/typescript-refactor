@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev:tsc": "tsc",
     "clean": "rimraf dist/ *.tgz",
-    "prod": "npm run clean && npm run dev:tsc"
+    "prod": "npm run clean && npm run dev:tsc && npm pack"
   },
   "bin": {
     "cplace-ts-refactor": "dist/index.js"

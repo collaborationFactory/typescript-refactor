@@ -17,10 +17,10 @@ export default class Refactor {
     public start() {
         this.config.plugins.forEach(pluginName => {
             const module = new CplaceIJModule(
-                pluginName, this.config.isSubRepo, // TODO: subrepo not true if across repo dependencies
-                moduleName => this.config.plugins.indexOf(moduleName) > -1
+                pluginName, path.join(process.cwd(), pluginName)
             );
             this.availableModules.set(pluginName, module);
+            this.resolveDependencies(module);
         });
 
         const platformTsPath = path.join(this.config.platformPath, 'assets', 'ts');
@@ -43,7 +43,9 @@ export default class Refactor {
         // Refactor.createBaseConfigFiles();
 
         for (const plugin of this.availableModules.values()) {
-            this.refactorPlugin(plugin);
+            if (plugin.repo === this.config.repo) {
+                this.refactorPlugin(plugin);
+            }
         }
 
     }
@@ -56,7 +58,7 @@ export default class Refactor {
 
         if (!plugin.isRefactored()) {
             const pluginRefactor = new RefactorPlugin(
-                plugin, this.relativePathToMain,
+                plugin, this.relativePathToMain, this.availableModules,
                 {
                     addImports: this.config.addImports,
                     addExports: this.config.addExports
@@ -72,38 +74,35 @@ export default class Refactor {
         return fs.existsSync(path.join(this.config.mainRepoPath, 'node_modules', '@types', 'angular', 'index.d.ts'));
     }
 
-    /**
-     * We create two base configs
-     * 1. tsconfig.settings.json - contains configuration that are common to all
-     * 2. tsconfig.base.json - inherits from tsconfig.settings.json and contains configuration that applies to only plugins that depend on platform and/or others
-     *
-     */
-    // private static createBaseConfigFiles() {
-    //     // for tsconfig.base.json
-    //     let settingsConfig = {
-    //         compilerOptions: {
-    //             experimentalDecorators: true,
-    //             target: 'es5',
-    //             strict: true,
-    //             // null and undefined are not assignable to concrete types
-    //             strictNullChecks: false,
-    //             // any type has to be declared it cannot be inferred
-    //             noImplicitAny: false,
-    //             // https://github.com/Microsoft/TypeScript/issues/19661
-    //             strictFunctionTypes: false,
-    //             noImplicitThis: false,
-    //             composite: true,
-    //             declaration: true,
-    //             declarationMap: true,
-    //             sourceMap: true,
-    //             typeRoots: ["./node_modules/@types", "./cf.cplace.platform/assets/@cplaceTypes"]
-    //
-    //         }
-    //     };
-    //
-    //     const settingsConfigFile = path.join(this.config.mainRepoPath, 'tsconfig.base.json');
-    //     saveFile(settingsConfigFile, JSON.stringify(settingsConfig, null, 4));
-    // }
+    private resolveDependencies(module: CplaceIJModule): void {
+        module.getDependencies().forEach(depName => {
+            if (this.availableModules.has(depName)) {
+                return;
+            }
+
+            const depPath = this.resolveModulePath(depName);
+            console.log(depPath);
+            const dep = new CplaceIJModule(depName, depPath);
+            this.availableModules.set(depName, dep);
+            this.resolveDependencies(dep);
+        });
+    }
+
+    private resolveModulePath(moduleName: string): string {
+        let modulePath = path.resolve(process.cwd(), moduleName);
+        if (fs.existsSync(modulePath)) {
+            return modulePath;
+        }
+
+        for (const repoDep of this.config.repoDependencies) {
+            modulePath = path.resolve(process.cwd(), '..', repoDep, moduleName);
+            if (fs.existsSync(modulePath)) {
+                return modulePath;
+            }
+        }
+        Logger.error('Could not resolve plugin', moduleName);
+        process.exit(1);
+    }
 }
 
 
