@@ -69,18 +69,25 @@ export default class RefactorPlugin {
         projectFiles.forEach(file => {
             try {
                 Logger.log(' ->', file.replace(this.tsPath + '/', ''));
+                Logger.debug('... [moduleTransformer]');
                 const sourceFile = this.project.getSourceFile(file);
                 if (sourceFile.isDeclarationFile) {
+                    Logger.debug('... Skipping file, is declaration file');
                     return;
                 }
+
                 if (this.shouldRefactor(sourceFile)) {
                     const result = ts.transform(sourceFile, [moduleTransformer], {addExportsToAll: this.options.addExports});
+                    Logger.debug('... Transformed file');
                     const transformed = this.printer.printFile(result.transformed[0]);
+                    Logger.debug('... Updating source file');
                     this.project.updateSourceFile(file, transformed);
                 }
 
                 if (this.options.addImports) {
+                    Logger.debug('... Resolving imports');
                     this.resolveImports(file);
+                    Logger.debug('... Organizing imports');
                     this.organizeImports(file);
                 }
             } catch (e) {
@@ -92,14 +99,24 @@ export default class RefactorPlugin {
 
         for (let [module, info] of ngModuleInfo) {
             const fileName: string = info.fileName;
+            if (fileName.indexOf(this.tsPath) !== 0) {
+                Logger.debug(' -> ... skipping file outside project:', fileName);
+                continue;
+            }
+
             Logger.log(' ->', fileName.replace(this.tsPath + '/', ''));
+            Logger.debug('... [angularDeclarationsTransformer]');
             const sourceFile = this.project.getSourceFile(fileName);
             const result = ts.transform(sourceFile, [angularDeclarationsTransformer]);
+            Logger.debug('... Transformed file');
             const transformed = this.printer.printFile(result.transformed[0]);
+            Logger.debug('... Updating source file');
             this.project.updateSourceFile(fileName, transformed);
 
             if (this.options.addImports) {
+                Logger.debug('... Resolving imports');
                 this.resolveImports(fileName);
+                Logger.debug('... Organizing imports');
                 this.organizeImports(fileName);
             }
         }
@@ -117,6 +134,7 @@ export default class RefactorPlugin {
 
     private resolveImports(fileName: string) {
         const semanticDiagnostics = this.project.getSemanticDiagnostics(fileName);
+        Logger.debug('... Got diagnostics:', semanticDiagnostics.length);
 
         let text: string;
         if (semanticDiagnostics.length) {
@@ -124,15 +142,17 @@ export default class RefactorPlugin {
         }
 
         let hasUnresolvedErrors = false;
-        semanticDiagnostics.forEach(diag => {
+        semanticDiagnostics.forEach((diag: ts.Diagnostic) => {
             // code 2304 is when typescript cannot find "name"
             if (diag.code === 2304) {
                 const fixes = this.project.getCodeFixes(fileName, diag);
                 // We only apply fixes if there is exactly one option, It's better not to apply fix than to apply wrong fix.
                 if (fixes.length && fixes.length === 1) {
+                    Logger.debug('... Found a fix at start', diag.start);
                     const cleanedChanges = this.cleanImportChanges(fileName, fixes[0].changes[0].textChanges);
                     text = applyTextChanges(text, cleanedChanges);
                 } else {
+                    Logger.debug('... Found', fixes.length, 'fixes');
                     hasUnresolvedErrors = true;
                 }
             }
@@ -254,13 +274,20 @@ export default class RefactorPlugin {
             return null;
         }
 
-        let commonDirectory = path.dirname(fileName);
+        const fileDir = path.dirname(fileName);
+        let commonDirectory = fileDir;
         let prefix = '';
+        let i = 0;
         while (resolvedFromPath.indexOf(commonDirectory) !== 0) {
             prefix = path.join('..', prefix);
-            commonDirectory = path.resolve(prefix, commonDirectory);
+            commonDirectory = path.resolve(commonDirectory, prefix);
             if (moduleTsPath === commonDirectory) {
                 break;
+            }
+            i += 1;
+            Logger.debug(resolvedFromPath, commonDirectory, prefix);
+            if (i == 4) {
+                process.exit(1);
             }
         }
 

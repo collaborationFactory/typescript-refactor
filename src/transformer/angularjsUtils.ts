@@ -87,7 +87,8 @@ export function getAngularDeclaration(node: ts.Node, tsModuleName: string): IAng
  * @returns {string}
  */
 export function getFirstCallExpressionIdentifier(expr: ts.CallExpression): string {
-    if (expr.expression.kind === ts.SyntaxKind.PropertyAccessExpression && expr.arguments.length === 2) {
+    if (expr.expression.kind === ts.SyntaxKind.PropertyAccessExpression
+        && expr.arguments && expr.arguments.length === 2) {
         let propertyAccessExpression = <ts.PropertyAccessExpression>(expr.expression);
         if (propertyAccessExpression.expression.kind === ts.SyntaxKind.Identifier && propertyAccessExpression.name.kind === ts.SyntaxKind.Identifier) {
             let expressionIdentifier = <ts.Identifier>(propertyAccessExpression.expression);
