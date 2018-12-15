@@ -8,15 +8,18 @@ export default class CplaceIJModule {
     public readonly assetsPath: string;
     private readonly dependencies: string[];
 
-    private refactored: boolean;
+    private refactored: boolean | null = null;
 
     constructor(public readonly pluginName: string,
                 public readonly pluginPath: string) {
         this.repo = path.basename(path.dirname(pluginPath));
         this.isInSubRepo = this.repo !== 'main';
         this.assetsPath = path.join(this.pluginPath, 'assets');
-        this.refactored = this.checkTsConfig();
         this.dependencies = this.findDependencies();
+    }
+
+    hasTsAssets(): boolean {
+        return fs.existsSync(path.join(this.assetsPath, 'ts'));
     }
 
     getDependencies() {
@@ -24,6 +27,9 @@ export default class CplaceIJModule {
     }
 
     isRefactored() {
+        if (this.refactored === null) {
+            this.refactored = this.checkTsConfig();
+        }
         return this.refactored;
     }
 

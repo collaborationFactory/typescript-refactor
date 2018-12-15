@@ -51,9 +51,12 @@ export default class Refactor {
     }
 
     private refactorPlugin(plugin: CplaceIJModule): void {
+        if (!plugin.hasTsAssets()) {
+            return;
+        }
         plugin.getDependencies()
             .map(d => this.availableModules.get(d))
-            .filter(dep => !dep.isRefactored())
+            .filter(dep => dep.hasTsAssets() && !dep.isRefactored())
             .forEach(dep => this.refactorPlugin(dep));
 
         if (!plugin.isRefactored()) {

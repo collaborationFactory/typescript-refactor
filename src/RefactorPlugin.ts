@@ -187,6 +187,10 @@ export default class RefactorPlugin {
 
         dependencies.forEach((dep) => {
             const module = this.allModules.get(dep);
+            if (!module.hasTsAssets()) {
+                return;
+            }
+
             const relPathToModule = module.repo === this.cplaceModule.repo
                 ? relativePathToRepoRoot
                 : path.join(relativePathToRepoRoot, '..', module.repo);
