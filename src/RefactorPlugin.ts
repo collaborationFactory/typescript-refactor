@@ -24,6 +24,8 @@ export default class RefactorPlugin {
     private printer: ts.Printer;
     private filesWithErrors: Set<string>;
 
+    private prefixPathToGeneratedJsToPluginMapping: Map<string, string>;
+
     constructor(private readonly cplaceModule: CplaceIJModule,
                 private readonly relativeRepoPathToMain: string,
                 private readonly allModules: Map<string, CplaceIJModule>,
@@ -43,7 +45,12 @@ export default class RefactorPlugin {
         removeFileIfExists(this.tsPath, '_app.d.ts');
 
         this.createTsConfig();
-        this.project = new TSProject(new LSHost(this.tsPath, []));
+        const lsHost = new LSHost(this.tsPath, []);
+        this.cplaceModule.getDependencies().forEach(depName => {
+            const depPlugin = this.allModules.get(depName);
+            lsHost.addSourceFilesFromPlugin(depPlugin);
+        });
+        this.project = new TSProject(lsHost);
     }
 
     refactor(): void {
@@ -121,18 +128,37 @@ export default class RefactorPlugin {
             }
         }
 
+        if (this.options.addImports && this.filesWithErrors.size > 0) {
+            Logger.log('Trying to stabilize missing imports...');
+            let importsStable;
+            do {
+                importsStable = true;
+                const errorFiles = [...this.filesWithErrors.values()];
+                for (const fileName of errorFiles) {
+                    Logger.log(' ->', fileName.replace(this.tsPath + '/', ''));
+                    Logger.debug('... Resolving imports again');
+                    const changedImports = this.resolveImports(fileName);
+                    if (changedImports) {
+                        Logger.log('... Found new imports!');
+                        importsStable = false;
+                    }
+                    this.organizeImports(fileName);
+                }
+            } while (!importsStable);
+        }
+
+        // YaY!! All done. Save all files
+        this.project.persist();
+
         if (this.filesWithErrors.size > 0) {
             Logger.warn('Manual cleanup is required for the following files:');
             this.filesWithErrors.forEach(fileName => {
                 Logger.warn(' ->', fileName.replace(this.tsPath + '/', ''));
             });
         }
-
-        // YaY!! All done. Save all files
-        this.project.persist();
     }
 
-    private resolveImports(fileName: string) {
+    private resolveImports(fileName: string): boolean {
         const semanticDiagnostics = this.project.getSemanticDiagnostics(fileName);
         Logger.debug('... Got diagnostics:', semanticDiagnostics.length);
 
@@ -141,6 +167,7 @@ export default class RefactorPlugin {
             text = this.project.getCurrentContents(fileName);
         }
 
+        let changedImports = false;
         let hasUnresolvedErrors = false;
         semanticDiagnostics.forEach((diag: ts.Diagnostic) => {
             // code 2304 is when typescript cannot find "name"
@@ -151,8 +178,9 @@ export default class RefactorPlugin {
                     Logger.debug('... Found a fix at start', diag.start);
                     const cleanedChanges = this.cleanImportChanges(fileName, fixes[0].changes[0].textChanges);
                     text = applyTextChanges(text, cleanedChanges);
+                    changedImports = true;
                 } else {
-                    Logger.debug('... Found', fixes.length, 'fixes');
+                    Logger.debug('... Found', fixes.length, 'fixes, message text:', diag.messageText);
                     hasUnresolvedErrors = true;
                 }
             }
@@ -166,6 +194,7 @@ export default class RefactorPlugin {
             }
             this.project.updateSourceFile(fileName, text);
         }
+        return changedImports;
     }
 
     private organizeImports(fileName: string) {
@@ -205,21 +234,23 @@ export default class RefactorPlugin {
         let paths = {};
         let refs = [];
 
+        this.prefixPathToGeneratedJsToPluginMapping = new Map();
         dependencies.forEach((dep) => {
             const module = this.allModules.get(dep);
             if (!module.hasTsAssets()) {
                 return;
             }
 
-            const relPathToModule = module.repo === this.cplaceModule.repo
+            const relPathToModuleRepo = module.repo === this.cplaceModule.repo
                 ? relativePathToRepoRoot
                 : path.join(relativePathToRepoRoot, '..', module.repo);
 
-            let relPath = path.join(relPathToModule, `${dep}/assets/ts`);
+            let relPath = path.join(relPathToModuleRepo, `${dep}/assets/ts`);
             paths[`@${dep}/*`] = [relPath + '/*'];
             refs.push({
                 path: relPath
             });
+            this.prefixPathToGeneratedJsToPluginMapping.set(path.join(relPathToModuleRepo, dep, 'assets', 'generated_js'), dep);
         });
 
         if (this.cplaceModule.isInSubRepo) {
@@ -267,6 +298,12 @@ export default class RefactorPlugin {
     }
 
     private tryResolveRelativeImport(fileName: string, fromPath: string): string | null {
+        for (const [prefix, plugin] of this.prefixPathToGeneratedJsToPluginMapping.entries()) {
+            if (fromPath.indexOf(prefix) === 0) {
+                return fromPath.replace(prefix, `@${plugin}`);
+            }
+        }
+
         const resolvedFromPath = path.resolve(fromPath);
         const moduleTsPath = path.resolve(this.cplaceModule.assetsPath, 'ts');
 
@@ -274,26 +311,24 @@ export default class RefactorPlugin {
             return null;
         }
 
-        const fileDir = path.dirname(fileName);
-        let commonDirectory = fileDir;
+        let commonDirectory = path.dirname(fileName);
         let prefix = '';
-        let i = 0;
         while (resolvedFromPath.indexOf(commonDirectory) !== 0) {
             prefix = path.join('..', prefix);
             commonDirectory = path.resolve(commonDirectory, prefix);
             if (moduleTsPath === commonDirectory) {
                 break;
             }
-            i += 1;
-            Logger.debug(resolvedFromPath, commonDirectory, prefix);
-            if (i == 4) {
-                process.exit(1);
-            }
         }
 
         if (resolvedFromPath.indexOf(commonDirectory) === 0) {
             const relativePathRemaining = resolvedFromPath.substring(commonDirectory.length);
-            return './' + path.join('.', prefix, relativePathRemaining);
+            const result = path.join('.', prefix, relativePathRemaining);
+            if (result.startsWith('.')) {
+                return result;
+            } else {
+                return './' + result;
+            }
         } else {
             return null;
         }

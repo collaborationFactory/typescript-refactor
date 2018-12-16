@@ -36,8 +36,6 @@ export class TSProject {
     private documentRegistry = ts.createDocumentRegistry(ts.sys.useCaseSensitiveFileNames);
 
     constructor(public host: LSHost) {
-        // just for god measure. make sure config is upto-date
-        this.host.parseConfigFile();
         this.service = ts.createLanguageService(this.host, this.documentRegistry);
     }
 
