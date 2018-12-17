@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as ts from 'typescript';
-import {moduleTransformer} from './transformer/moduleTransformer';
+import {createModuleTransformer} from './transformer/moduleTransformer';
 import {PLATFORM_PLUGIN} from './config';
 import {applyTextChanges, copyFolderRecursiveSync, ensureDirExists, removeFileIfExists, saveFile} from './utils';
 import {TSProject} from './ts/TSProject';
@@ -23,6 +23,7 @@ export default class RefactorPlugin {
     private project: TSProject;
     private printer: ts.Printer;
     private filesWithErrors: Set<string>;
+    private allPluginNames: string[];
 
     private prefixPathToGeneratedJsToPluginMapping: Map<string, string>;
 
@@ -44,13 +45,18 @@ export default class RefactorPlugin {
         removeFileIfExists(this.tsPath, 'tscommand.txt');
         removeFileIfExists(this.tsPath, '_app.d.ts');
 
+        const pluginNames = new Set<string>();
+        pluginNames.add(this.cplaceModule.pluginName);
+
         this.createTsConfig();
         const lsHost = new LSHost(this.tsPath, []);
         this.cplaceModule.getDependencies().forEach(depName => {
             const depPlugin = this.allModules.get(depName);
             lsHost.addSourceFilesFromPlugin(depPlugin);
+            pluginNames.add(depName);
         });
         this.project = new TSProject(lsHost);
+        this.allPluginNames = [...pluginNames.values()];
     }
 
     refactor(): void {
@@ -84,7 +90,10 @@ export default class RefactorPlugin {
                 }
 
                 if (this.shouldRefactor(sourceFile)) {
-                    const result = ts.transform(sourceFile, [moduleTransformer], {addExportsToAll: this.options.addExports});
+                    const result = ts.transform(
+                        sourceFile, [createModuleTransformer(this.allPluginNames)],
+                        {addExportsToAll: this.options.addExports}
+                    );
                     Logger.debug('... Transformed file');
                     const transformed = this.printer.printFile(result.transformed[0]);
                     Logger.debug('... Updating source file');
@@ -298,8 +307,12 @@ export default class RefactorPlugin {
     }
 
     private tryResolveRelativeImport(fileName: string, fromPath: string): string | null {
+        if (fromPath.startsWith('@')) {
+            return null;
+        }
+
         for (const [prefix, plugin] of this.prefixPathToGeneratedJsToPluginMapping.entries()) {
-            if (fromPath.indexOf(prefix) === 0) {
+            if (fromPath.startsWith(prefix)) {
                 return fromPath.replace(prefix, `@${plugin}`);
             }
         }
@@ -307,13 +320,13 @@ export default class RefactorPlugin {
         const resolvedFromPath = path.resolve(fromPath);
         const moduleTsPath = path.resolve(this.cplaceModule.assetsPath, 'ts');
 
-        if (resolvedFromPath.indexOf(moduleTsPath) !== 0) {
+        if (!resolvedFromPath.startsWith(moduleTsPath)) {
             return null;
         }
 
         let commonDirectory = path.dirname(fileName);
         let prefix = '';
-        while (resolvedFromPath.indexOf(commonDirectory) !== 0) {
+        while (!resolvedFromPath.startsWith(commonDirectory)) {
             prefix = path.join('..', prefix);
             commonDirectory = path.resolve(commonDirectory, prefix);
             if (moduleTsPath === commonDirectory) {
@@ -321,7 +334,7 @@ export default class RefactorPlugin {
             }
         }
 
-        if (resolvedFromPath.indexOf(commonDirectory) === 0) {
+        if (resolvedFromPath.startsWith(commonDirectory)) {
             const relativePathRemaining = resolvedFromPath.substring(commonDirectory.length);
             const result = path.join('.', prefix, relativePathRemaining);
             if (result.startsWith('.')) {
