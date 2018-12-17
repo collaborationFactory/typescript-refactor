@@ -23,11 +23,11 @@ import * as path from 'path';
     if (argv[2] === '--help' || argv[2] === '?') {
         console.log('Script for refactoring cplace typescript files\n');
         console.log('Available options:');
-        console.log('   -verbose', '     Verbose logging');
-        console.log('   -noModuleFiles ', '     Creates a file that defines angular module and all related functions(directives, controllers, ...)');
-        console.log('   -noImports', '     Do not try to resolve reference error and add import statements if possible');
-        console.log('   -noExports', '     Do not add export keyword to all top level functions, classes and interfaces of a refactored file');
-        console.log('   -plugins cf.cplace.cp4p.planning,cf.cplace.training.extended', '     List of plugins to refactor');
+        console.log('   -verbose                    Verbose logging');
+        console.log('   -plugins plugin1,plugin2    List of plugins to refactor');
+        console.log('   -noModuleFiles              Do not create files that defines angular module and all related functions(directives, controllers, ...)');
+        console.log('   -noImports                  Do not try to resolve reference error and add import statements if possible');
+        console.log('   -noExports                  Do not add export keyword to all top level functions, classes and interfaces of a refactored file');
         return;
     }
 
