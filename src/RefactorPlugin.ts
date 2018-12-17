@@ -85,7 +85,7 @@ export default class RefactorPlugin {
                 Logger.debug('... [moduleTransformer]');
                 const sourceFile = this.project.getSourceFile(file);
                 if (sourceFile.isDeclarationFile) {
-                    Logger.debug('... Skipping file, is declaration file');
+                    Logger.warn('... !! Please rewrite declaration files manually:', path.basename(sourceFile.fileName));
                     return;
                 }
 
@@ -140,7 +140,9 @@ export default class RefactorPlugin {
         if (this.options.addImports && this.filesWithErrors.size > 0) {
             Logger.log('Trying to stabilize missing imports...');
             let importsStable;
+            let i = 1;
             do {
+                Logger.log('... Stabilization run:', i);
                 importsStable = true;
                 const errorFiles = [...this.filesWithErrors.values()];
                 for (const fileName of errorFiles) {
@@ -153,6 +155,7 @@ export default class RefactorPlugin {
                     }
                     this.organizeImports(fileName);
                 }
+                i += 1;
             } while (!importsStable);
         }
 
