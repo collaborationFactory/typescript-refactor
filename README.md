@@ -38,6 +38,8 @@ The general refactoring procedure to transform your TypeScript sources is as fol
 The following aspects **must** be cleaned up manually afterwards:
 
 - If you use `underscore` in your files you have to add the following import to every file using it: `import * as _ from 'underscore'`
+- If you use `moment` in your files you have to add the following import to every file using it: `import * as moment from 'moment'`
+- If you use `lang.message` or `lang.parameterizedMessage` in your files you have to remove `lang.` and import the `message`/`parameterizedMessage` functions directly
 - If you use `angular.module(...).config(...)` or `angular.module(...).run(...)` must add those functions again after refactoring
 - If you use `angular.module(...).directive(DIRECTIVE, directiveFunctionRefernce)`, i.e. you use a constant to specify the directive name without properly exporting it as a unique name you have to replace `DIRECTIVE` with the proper value
 
