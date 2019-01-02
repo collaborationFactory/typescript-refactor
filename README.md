@@ -2,8 +2,11 @@
 
 ## Prerequisites
 
-1. Ensure the new assets compiler `cplace-asc` is installed: `npm i -g @cplace/asc`
-2. Ensure every plugin has an `app.ts` file that needs to be the entry point. Any code you want to use has to be "reachable" by imports from that file.
+1. Ensure typescript is installed globally: `npm install -g typescript`
+2. Compile the refactor scripts from TypeScript to JavaScript: `tsc`
+3. Create a symbolic link which points to the refactor script: `npm link`
+4. Ensure the new assets compiler `cplace-asc` is installed: `npm i -g @cplace/asc`
+5. Ensure every plugin has an `app.ts` file that needs to be the entry point. Any code you want to use has to be "reachable" by imports from that file.
 
 
 ## Refactoring Procedure
