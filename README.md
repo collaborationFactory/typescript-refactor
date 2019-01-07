@@ -1,10 +1,108 @@
 # cplace Typescript Refactoring
 
+## Motivation
+Our typescript codebase is(not any more) organised using namespace/modules. While everything works fine, for large project like cplace, it can be tedious to write and maintain typescript codebase.
+Using modules also makes it difficult to identify dependencies between components and different plugins. 
+
+The javascript community has adopted ES6 import/export mechanism as the defacto way to organize typescript/javascript projects, our refactoring initiative will keep us up-to-date with the current trend. Moreover most of the new tools work either only or better with ES6 style import/export mechanism.   
+Also, IntelliJ support for module based code is not good and it does not provide proper autocomplete.      
+
+We believe that ES6 style import/expots will provide more flexibility in the way we write our frontend code and will be easier to maintain.
+
+## What will change
+Lets assume following is our current code
+
+// MyCtrl.ts
+```typescript
+module cf.cplace.myPlugin {
+    
+    class MyCtrl {
+        static CTRL_NAME = 'cf.cplace.myPlugin.MyCtrl';
+        
+        constructor(public scope: ng.IScope){}
+        
+        method1(widgetCtrl: cf.cplace.platform.widgetLayout.WidgetCtrl) { /* 1 */
+        }
+    }
+    
+    angular.module('cf.cplace.myPlugin')
+    .controller('cf.cplace.myPlugin.MyCtrl', MyCtrl);
+}    
+```
+
+// MyDirective.ts
+```typescript
+module cf.cplace.myPlugin {
+    
+    
+    function myDirective() {
+        return {
+            controller: MyCtrl.CTRL_NAME, /* 2 */
+           ...
+        }
+    }
+    
+    angular.module('cf.cplace.myPlugin')
+    .directive('myDirective', myDirective);
+}    
+```
+
+This code will be refactored to 
+
+ // MyCtrl.ts
+```typescript
+import {WidgetCtrl} from '@cf.cplace.platform/widgetLayout/widgetCtrl';
+import {IScope} from 'angular';
+
+export class MyCtrl {
+    static CTRL_NAME = 'cf.cplace.myPlugin.MyCtrl';
+    
+    constructor(public scope: IScope){}
+    
+    method1(widgetCtrl: WidgetCtrl) {}
+}
+```
+
+// MyDirective.ts
+```typescript
+import {MyCtrl} from './MyCtrl';
+
+export function myDirective() {
+    return {
+       controller: MyCtrl.CTRL_NAME
+        ...
+    }
+}
+```
+
+
+// app.ts
+```typescript
+import {MyCtrl} from './MyCtrl';
+import {myDirective} from './myDirective';
+
+const MyAngularModule = angular
+    .module('cf.cplace.myPlugin')
+    .controller(MyCtrl.CTRL_NAME, MyCtrl);
+    .directive('myDirective', myDirective);
+    .name;
+    
+export default MyAngularModule;
+```
+
+As we can see in the old code `MyCtrl` depends on `WidgetCtrl`(1) from platform and `myDirective` depends on `MyCtrl`(2) but this relationship is not evident from the code itself.
+Moreover if a cplace plugin depends on other cplace plugins, there is no way to define this dependency relationship and anything can be accessed from anywhere.
+
+The new refactored code makes relationship clear and evident while reading the code.    
+
+
 ## Prerequisites
 
 1. Install typescript refactor script using `npm i -g @cplace/ts-refactor`
 2. Ensure the new assets compiler `cplace-asc` is installed: `npm i -g @cplace/asc`
-3. Ensure every plugin has an `app.ts` file that needs to be the entry point. Any code you want to use has to be "reachable" by imports from that file.
+3. Ensure every plugin has an `app.ts` file that needs to be the entry point. Any code you want to use has to be reachable<sup>*</sup> by imports from that file.
+
+<sub> * Not all files have to be imported into app.ts but all files should be reachable transitively.</sub>  
 
 
 ## Refactoring Procedure
@@ -19,7 +117,7 @@ The general refactoring procedure to transform your TypeScript sources is as fol
     ts-old/
     tsconfig.json
     ```
-    
+    If any plugins to be refactored already has tsconfig.json file, delete them. 
 3. Run `cplace-ts-refactor` (or on *nix better: `cplace-ts-refactor | tee refactor.log`). The old `ts` source files will be copied to `assets/ts-old` for later reference.
 
 4. See the generated output for `WARN` messages and the **Known Issues** listed below.
@@ -30,9 +128,15 @@ The general refactoring procedure to transform your TypeScript sources is as fol
     
 6. Fix any issues detected in step 4.
 
-7. Make sure you have the new assets compiler installed (`cplace-asc`).
+7. If your code uses old http promise API, refactor it to new Promise API. eg. <br> 
+`this.$http.get(someUrl).success((data) => {}).error((data) => {}) ` will be refactored to <br> 
+`this.$http.get(someUrl).then((response: IHttpResponse<yourReturnType or any>) => {response.data...}, (response) => {})` <br>
+Notice that in new promise API data is not directly available, instead it is part of response object. 
 
-8. Test the refactored changes by running `cplace-asc -c` and starting your cplace server.
+8. The refactor script might miss some angular declarations and will not add them to `app.ts` file. <br>
+    Just go through all directives/controllers/services etc and make sure they are declared in your `app.ts`  
+
+9. Make sure you have the new assets compiler installed (`cplace-asc`). Test the refactored changes by running `cplace-asc -c` and starting your cplace server.
 
 ## Known Issues
 
@@ -74,93 +178,20 @@ All generated log output will then be captured inside `refactor.log`.
 During execution the script will output `WARN` messages if there are problems with automatic migration. **You have to manually inspect all files listed there afterwards**.
 
 
+## FAQs
 
+#### I followed all the steps properly but I still cannot get my typescript to compile/bundle.
 
-<!--
-#### Old Stuff
+Make sure you do not have any circular references in your codebase. We use webpack to bundle the compiled typescript code and webpack cannot handle circular references.
+If typescript compilation is failing, read log messages generated by the assets compiler they are quite descriptive.
+
+#### Code compiles but IntelliJ still shows errors.
+
+Sometimes intelliJ fails to sync when there are too many changes at once. Goto View > Tool windows > Typescript and restart typescript service. This window also lists all the errors in your typescript project.
+
+#### I ran the refactor script nothing happened script exited without any output
+
+Make sure that plugin you are trying to refactor does not already have `tsconfig.json`, if its there then delete it and try again.
+
  
-Our directory structure for typescript files is
-```
-cf.cplace.plugin
--- assets
----- ts
------- dir1
------- dir2
------- file1.ts
------- file2.ts
------- tscommand.txt
-```  
- 
-// MyCtrl.ts
-```typescript
-module cf.cplace.myPlugin {
     
-    class MyCtrl {
-        constructor(){}
-        
-        method1() {}
-    }
-    
-    angular.module('cf.cplace.myPlugin')
-    .controller('cf.cplace.myPlugin.MyCtrl', MyCtrl);
-}    
-```
-// MyDirective.ts
-```typescript
-module cf.cplace.myPlugin {
-    
-    
-    function myDirective() {
-        return {
-            controller: MyCtrl.CTRL_NAME
-           ...
-        }
-    }
-    
-    angular.module('cf.cplace.myPlugin')
-    .directive('myDirective', myDirective);
-}    
-```
-
-
-**Will be refactored to**
-
-
- // MyCtrl.ts
-```typescript
-export class MyCtrl {
-    static CTRL_NAME = 'cf.cplace.myPlugin.MyCtrl';
-    
-    constructor(){}
-    
-    method1() {}
-}
-```
-
-// MyDirective.ts
-```typescript
-import {MyCtrl} from './MyCtrl';
-
-export function myDirective() {
-    return {
-       controller: MyCtrl.CTRL_NAME
-        ...
-    }
-}
-```
-
-
-**!! DESCRIBE MORE**
-a new file will be created if it doesnt exists yet
-// module.ts
-```typescript
-import {MyCtrl} from './MyCtrl';
-import {myDirective} from './myDirective';
-
-export const angular
-    .module('cf.cplace.myPlugin')
-    .controller(MyCtrl.CTRL_NAME, MyCtrl);
-    .directive('myDirective', myDirective);
-    .name;
-```
--->
