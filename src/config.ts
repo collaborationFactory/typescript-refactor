@@ -5,48 +5,34 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {Logger} from './logger';
-import CplaceIJModule from './CplaceIJModule';
 
 export const PLATFORM_PLUGIN = 'cf.cplace.platform';
 
 export interface IConfig {
-    isSubRepo: boolean;
-    mainRepoPath: string;
-    platformPath: string;
+    repo: string;
+    repoDependencies: string[];
+    isSubRepo?: boolean;
+    mainRepoPath?: string;
+    platformPath?: string;
     plugins: string[];
 
     verbose: boolean;
-    addImports: true;
-    addExports: true;
-    createModuleFiles: true;
+    addImports: boolean;
+    addExports: boolean;
+    createModuleFiles: boolean;
 }
 
-/**
- * This will contain all the available modules with typescript in the current repo
- */
-export const availableModules = new Map<string, CplaceIJModule>();
+export function detectAndGenerateConfig(commandLineOptions: IConfig): IConfig {
+    const config: IConfig = {...commandLineOptions};
 
-/**
- * This config will be used throughout the script
- */
-export let config: IConfig = {} as IConfig;
-
-export function detectAndGenerateConfig(commandLineOptions: any): IConfig {
-    let currentDir = process.cwd();
-    // currentDir = '/Users/pragatisureka/software/cf/repos/main';
-    currentDir = '/Users/pragatisureka/software/cf/repos/main';
-    config.verbose = commandLineOptions.verbose;
-    config.addExports = commandLineOptions.addExports;
-    config.addImports = commandLineOptions.addImports;
-    config.createModuleFiles = commandLineOptions.createModuleFiles;
-
+    const currentDir = process.cwd();
     let error = false;
     let potentialPlatformDirectory = path.join(currentDir, PLATFORM_PLUGIN);
     if (path.basename(currentDir) === 'main' && fs.lstatSync(potentialPlatformDirectory).isDirectory()) {
         config.isSubRepo = false;
         config.mainRepoPath = currentDir;
         config.platformPath = potentialPlatformDirectory;
-    } else if (fs.existsSync(path.join(currentDir, '/parent-repos.json'))) {
+    } else if (fs.existsSync(path.join(currentDir, 'parent-repos.json'))) {
         config.isSubRepo = true;
         const potentialMainDirectory = path.join(currentDir, '..', 'main');
         potentialPlatformDirectory = path.join(potentialMainDirectory, PLATFORM_PLUGIN);
@@ -56,6 +42,9 @@ export function detectAndGenerateConfig(commandLineOptions: any): IConfig {
         } else {
             error = true;
         }
+
+        const parentReposContent = fs.readFileSync(path.join(currentDir, 'parent-repos.json'), 'utf8');
+        config.repoDependencies = Object.keys(JSON.parse(parentReposContent));
     } else {
         error = true;
     }
@@ -71,14 +60,10 @@ export function detectAndGenerateConfig(commandLineOptions: any): IConfig {
         config.plugins = getPluginsInRepo(currentDir);
     }
 
-    config.plugins.forEach((plugin) => {
-        availableModules.set(plugin, new CplaceIJModule(plugin))
-    });
-
     return config;
 }
 
-function getPluginsInRepo(repoPath: string) {
+function getPluginsInRepo(repoPath: string): string[] {
     const plugins = [];
     const files = fs.readdirSync(repoPath);
     files.forEach(file => {

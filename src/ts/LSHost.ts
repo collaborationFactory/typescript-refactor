@@ -1,4 +1,7 @@
 import * as ts from 'typescript';
+import CplaceIJModule from '../CplaceIJModule';
+import * as path from 'path';
+import {Logger} from '../logger';
 
 
 export class LSHost implements ts.LanguageServiceHost {
@@ -16,11 +19,29 @@ export class LSHost implements ts.LanguageServiceHost {
      * @param {string} path
      * @param additionalFiles
      */
-    constructor(public path: string, private additionalFiles?: string[]) {
+    constructor(public path: string, private additionalFiles: string[] = []) {
         if (!this.path.endsWith('/')) {
             this.path = this.path + '/';
         }
+
+        const resolvedEsLib = require.resolve('typescript/lib/lib.es2016.full.d.ts');
+        if (this.additionalFiles.indexOf(resolvedEsLib) === -1) {
+            // this.additionalFiles.push(resolvedEsLib);
+        }
+
         this.parseConfigFile();
+    }
+
+    addSourceFilesFromPlugin(plugin: CplaceIJModule): void {
+        if (!plugin.hasTsAssets()) {
+            return;
+        }
+        const tsPath = path.resolve(plugin.assetsPath, 'ts');
+        const files = this.readDirectory(tsPath, ['ts'], ['*.js']);
+        if (files && files.length) {
+            Logger.debug('... Added all source files from', plugin.pluginName);
+            this.additionalFiles = this.additionalFiles.concat(files);
+        }
     }
 
     getCompilationSettings() {
@@ -67,7 +88,7 @@ export class LSHost implements ts.LanguageServiceHost {
     }
 
     getDefaultLibFileName(options: ts.CompilerOptions): string {
-        return ts.getDefaultLibFileName(options);
+        return ts.getDefaultLibFilePath(options);
     }
 
     getProjectReferences() {
@@ -86,4 +107,8 @@ export class LSHost implements ts.LanguageServiceHost {
 
         return this.parsedConfig;
     }
+
+    readDirectory = ts.sys.readDirectory;
+    readFile = ts.sys.readFile;
+    fileExists = ts.sys.fileExists;
 }

@@ -1,6 +1,6 @@
 import * as ts from 'typescript';
 import {IAngularDeclaration} from '../model';
-import {metaData} from '../metaData';
+import {MetaData} from '../metaData';
 
 /**
  * angular expression should always start with
@@ -44,13 +44,13 @@ export function getAngularDeclaration(node: ts.Node, tsModuleName: string): IAng
                 let moduleId = parent.arguments[0];
                 let moduleName = moduleId.getText();
                 if (moduleId.kind === ts.SyntaxKind.Identifier) {
-                    let ngModuleForVarIdentifier = metaData.getNgModuleForVarIdentifier(moduleId.getText(), tsModuleName);
+                    let ngModuleForVarIdentifier = MetaData.get().getNgModuleForVarIdentifier(moduleId.getText(), tsModuleName);
                     moduleName = ngModuleForVarIdentifier ? ngModuleForVarIdentifier : moduleId.getText();
                 }
                 dec.ngModule = moduleName;
                 dec.declarations = {};
-            } else if (metaData.getNgModuleForIdentifier(propertyAccessExpression.expression.getText(), tsModuleName)) {
-                dec.ngModule = metaData.getNgModuleForIdentifier(propertyAccessExpression.expression.getText(), tsModuleName);
+            } else if (MetaData.get().getNgModuleForIdentifier(propertyAccessExpression.expression.getText(), tsModuleName)) {
+                dec.ngModule = MetaData.get().getNgModuleForIdentifier(propertyAccessExpression.expression.getText(), tsModuleName);
                 dec.declarations = {};
                 dec.declarations[identifier.text] = [];
 
@@ -87,7 +87,8 @@ export function getAngularDeclaration(node: ts.Node, tsModuleName: string): IAng
  * @returns {string}
  */
 export function getFirstCallExpressionIdentifier(expr: ts.CallExpression): string {
-    if (expr.expression.kind === ts.SyntaxKind.PropertyAccessExpression && expr.arguments.length === 2) {
+    if (expr.expression.kind === ts.SyntaxKind.PropertyAccessExpression
+        && expr.arguments && expr.arguments.length === 2) {
         let propertyAccessExpression = <ts.PropertyAccessExpression>(expr.expression);
         if (propertyAccessExpression.expression.kind === ts.SyntaxKind.Identifier && propertyAccessExpression.name.kind === ts.SyntaxKind.Identifier) {
             let expressionIdentifier = <ts.Identifier>(propertyAccessExpression.expression);
@@ -95,7 +96,7 @@ export function getFirstCallExpressionIdentifier(expr: ts.CallExpression): strin
             if (expressionIdentifier.text === 'angular' && nameIdentifier.text === 'module') {
                 return 'angular.module';
             }
-            if (metaData.getNgModuleForIdentifier(expressionIdentifier.text)) {
+            if (MetaData.get().getNgModuleForIdentifier(expressionIdentifier.text)) {
                 return 'angular';
             }
         } else {

@@ -4,28 +4,30 @@
  */
 
 import Refactor from './Refactor';
-import {detectAndGenerateConfig} from './config';
+import {detectAndGenerateConfig, IConfig} from './config';
 import {Logger} from './logger';
-import CplaceIJModule from './CplaceIJModule';
+import * as path from 'path';
 
 (() => {
     const argv = process.argv;
-    const configJSON = {
-        verbose: false,
+    const configJSON: IConfig = {
+        repo: path.basename(process.cwd()),
+        repoDependencies: [],
         plugins: [],
-        createModuleFiles: true,
+        verbose: false,
         addImports: true,
-        addExports: true
+        addExports: true,
+        createModuleFiles: true
     };
 
     if (argv[2] === '--help' || argv[2] === '?') {
         console.log('Script for refactoring cplace typescript files\n');
         console.log('Available options:');
-        console.log('   -verbose', '     Verbose logging');
-        console.log('   -noModuleFiles ', '     Creates a file that defines angular module and all related functions(directives, controllers, ...)');
-        console.log('   -noImports', '     Do not try to resolve reference error and add import statements if possible');
-        console.log('   -noExports', '     Do not add export keyword to all top level functions, classes and interfaces of a refactored file');
-        console.log('   -plugins cf.cplace.cp4p.planning,cf.cplace.training.extended', '     List of plugins to refactor');
+        console.log('   -verbose                    Verbose logging');
+        console.log('   -plugins plugin1,plugin2    List of plugins to refactor');
+        console.log('   -noModuleFiles              Do not create files that defines angular module and all related functions(directives, controllers, ...)');
+        console.log('   -noImports                  Do not try to resolve reference error and add import statements if possible');
+        console.log('   -noExports                  Do not add export keyword to all top level functions, classes and interfaces of a refactored file');
         return;
     }
 
@@ -55,12 +57,9 @@ import CplaceIJModule from './CplaceIJModule';
 
     Logger.setVerboseLogging(configJSON.verbose);
 
-    // configJSON.plugins = [new CplaceIJModule('cf.cplace.simpleBoard')];
-    // configJSON.addExports = true;
-    // configJSON.addImports = true;
     const config = detectAndGenerateConfig(configJSON);
-    Logger.log('Running with configuration ', JSON.stringify(config, null, 4));
+    Logger.debug('Running with configuration ', JSON.stringify(config, null, 4));
 
-    new Refactor().start();
+    new Refactor(config).start();
 
 })();

@@ -1,15 +1,16 @@
 {
   "name": "@cplace/ts-refactor",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "Utility to automate some trivial tasks in refactoring typescript files to ES6 modules style",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "npm run run:live",
-    "run:live": "nodemon --exec './node_modules/.bin/ts-node --cache-directory .tscache' ./src/index.ts"
+    "dev:tsc": "tsc",
+    "clean": "rimraf dist/ *.tgz",
+    "prod": "npm run clean && npm run dev:tsc && npm pack"
   },
   "bin": {
-    "cplace-ts-refactor": "dist/src/index.js"
+    "cplace-ts-refactor": "dist/index.js"
   },
   "author": "collaboration Factory AG",
   "repository": {
@@ -20,17 +21,11 @@
   "devDependencies": {
     "@types/node": "^10.5.4",
     "@types/xml2js": "^0.4.3",
-    "del": "^3.0.0",
-    "gulp": "^3.9.1",
-    "gulp-sourcemaps": "^2.6.4",
-    "gulp-typescript": "^5.0.0-alpha.3",
-    "merge2": "^1.2.2",
-    "nodemon": "^1.18.3",
-    "ts-node": "^7.0.0",
-    "typescript": "^3.0.1"
+    "rimraf": "^2.6.2"
   },
   "dependencies": {
     "mkdirp": "^0.5.1",
+    "typescript": "^3.2.2",
     "xml2js": "^0.4.19"
   }
 }

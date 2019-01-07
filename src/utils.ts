@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as ts from 'typescript';
 import * as mkdirp from 'mkdirp';
-
+import * as ts from 'typescript/lib/tsserverlibrary';
+import {Logger} from './logger';
 
 export function append(to, value) {
     if (value === undefined)
@@ -52,10 +52,16 @@ export function ensureDirExists(path: string) {
     mkdirp.sync(path);
 }
 
-export function getRelativeImportPath() {
-
+export function removeFileIfExists(...segments: string[]) {
+    const filePath = path.join(...segments);
+    if (fs.existsSync(filePath)) {
+        if (fs.lstatSync(filePath).isDirectory()) {
+            Logger.error('Cannot remove - is directory:', filePath);
+            return;
+        }
+        fs.unlinkSync(filePath);
+    }
 }
-
 
 function copyFileSync(source: string, target: string) {
     let targetFile = target;

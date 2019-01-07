@@ -1,33 +1,83 @@
-# Cplace Typescript Refactor
+# cplace Typescript Refactoring
 
-**Configuration** (refactor.config)
+## Prerequisites
 
-Config file should be in the directory where the script is executing or absolute path of config file should be provided. 
-```json
-{
-  // verbose logging
-  "verbose": true,
-  // plugins to refactor
-  "plugins": ["plugin1", "plugin2"],
-  // if true module.ts file will be created at appropriate location 
-  "createModuleFiles": false,
-  // resolve imports where possible
-  "addImports": false,
-  // add export to top level functions, classes and const declarations  
-  "addExports": false,
-  // remove module prefixes eg. cf.cplace.platform.widgetLayout.CPLACE_WIDGET_DIRECTIVE 
-  // will be replaced with CPLACE_WIDGET_DIRECTIVE with import statement for the same.    
-  "referencesToReplace": ["cf.cplace.platform"]  
-}
+1. Install typescript refactor script using `npm i -g @cplace/ts-refactor`
+2. Ensure the new assets compiler `cplace-asc` is installed: `npm i -g @cplace/asc`
+3. Ensure every plugin has an `app.ts` file that needs to be the entry point. Any code you want to use has to be "reachable" by imports from that file.
+
+
+## Refactoring Procedure
+
+The general refactoring procedure to transform your TypeScript sources is as follows:
+
+1. Ensure the `main` repository is in the appropriate branch with already refactored TypeScript sources<br>
+    If you have other repository dependencies those need to be already refactored, too.
+    
+2. Adapt the repository's `.gitignore` file to include these lines:<br>
+    ```
+    ts-old/
+    tsconfig.json
+    ```
+    
+3. Run `cplace-ts-refactor` (or on *nix better: `cplace-ts-refactor | tee refactor.log`). The old `ts` source files will be copied to `assets/ts-old` for later reference.
+
+4. See the generated output for `WARN` messages and the **Known Issues** listed below.
+
+5. Open IntelliJ and in the Project View on the left for every plugin in your repository:
+    1. Select the plugin's `assets/ts` folder.
+    2. Right-click the folder and select *Reformat Code*
+    
+6. Fix any issues detected in step 4.
+
+7. Make sure you have the new assets compiler installed (`cplace-asc`).
+
+8. Test the refactored changes by running `cplace-asc -c` and starting your cplace server.
+
+## Known Issues
+
+The following aspects **must** be cleaned up manually afterwards:
+
+- If you use `underscore` in your files you have to add the following import to every file using it: `import * as _ from 'underscore'`
+- If you use `moment` in your files you have to add the following import to every file using it: `import * as moment from 'moment'`
+- If you use `lang.message` or `lang.parameterizedMessage` in your files you have to remove `lang.` and import the `message`/`parameterizedMessage` functions directly
+- If you use `angular.module(...).config(...)` or `angular.module(...).run(...)` must add those functions again after refactoring
+- If you use `angular.module(...).directive(DIRECTIVE, directiveFunctionRefernce)`, i.e. you use a constant to specify the directive name without properly exporting it as a unique name you have to replace `DIRECTIVE` with the proper value
+
+## Usage
+
+The tool has to be executed inside the root of a (sub-)repository directly.
+```
+$ cplace-ts-refactor --help
+Script for refactoring cplace typescript files
+
+Available options:
+   -verbose                    Verbose logging
+   -plugins plugin1,plugin2    List of plugins to refactor
+   -noModuleFiles              Do not create files that defines angular module and all related functions(directives, controllers, ...)
+   -noImports                  Do not try to resolve reference error and add import statements if possible
+   -noExports                  Do not add export keyword to all top level functions, classes and interfaces of a refactored file
 ```
 
-All the options can be overridden via commandline options
+Your typical usage should not require any arguments at all - to refactor all plugins inside a repository just use:
+```
+$ cplace-ts-refactor
+```
 
-* -verbose
-* -plugins plugin1,plugin2
-* -config /absolute/path/of/refactor.config
+On *nix systems we recommend the following to also capture the log output into a file:
+```
+$ cplace-ts-refactor | tee refactor.log
+```
 
- 
+All generated log output will then be captured inside `refactor.log`.
+
+During execution the script will output `WARN` messages if there are problems with automatic migration. **You have to manually inspect all files listed there afterwards**.
+
+
+
+
+<!--
+#### Old Stuff
  
 Our directory structure for typescript files is
 ```
@@ -39,13 +89,7 @@ cf.cplace.plugin
 ------ file1.ts
 ------ file2.ts
 ------ tscommand.txt
-```
-
-**Only files listed in tscommand.txt will be considered for refactoring.**
-
-If the script is executed from main folder then all modules will be refactored.
-If the script is executed inside of a module directory then only that module will be refactored
-  
+```  
  
 // MyCtrl.ts
 ```typescript
@@ -105,6 +149,8 @@ export function myDirective() {
 }
 ```
 
+
+**!! DESCRIBE MORE**
 a new file will be created if it doesnt exists yet
 // module.ts
 ```typescript
@@ -117,3 +163,4 @@ export const angular
     .directive('myDirective', myDirective);
     .name;
 ```
+-->
