@@ -339,7 +339,8 @@ export default class RefactorPlugin {
 
         if (resolvedFromPath.startsWith(commonDirectory)) {
             const relativePathRemaining = resolvedFromPath.substring(commonDirectory.length);
-            const result = path.join('.', prefix, relativePathRemaining);
+            let result = path.join('.', prefix, relativePathRemaining);
+            result = result.replace(/\\/g, '/');
             if (result.startsWith('.')) {
                 return result;
             } else {
