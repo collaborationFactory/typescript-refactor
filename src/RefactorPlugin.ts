@@ -91,7 +91,8 @@ export default class RefactorPlugin {
 
                 if (this.shouldRefactor(sourceFile)) {
                     const result = ts.transform(
-                        sourceFile, [createModuleTransformer(this.allPluginNames)],
+                        sourceFile,
+                        [createModuleTransformer(this.allPluginNames)],
                         {addExportsToAll: this.options.addExports}
                     );
                     Logger.debug('... Transformed file');

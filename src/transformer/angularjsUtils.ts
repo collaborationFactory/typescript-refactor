@@ -90,7 +90,8 @@ export function getFirstCallExpressionIdentifier(expr: ts.CallExpression): strin
     if (expr.expression.kind === ts.SyntaxKind.PropertyAccessExpression
         && expr.arguments && expr.arguments.length === 2) {
         let propertyAccessExpression = <ts.PropertyAccessExpression>(expr.expression);
-        if (propertyAccessExpression.expression.kind === ts.SyntaxKind.Identifier && propertyAccessExpression.name.kind === ts.SyntaxKind.Identifier) {
+        if (propertyAccessExpression.expression.kind === ts.SyntaxKind.Identifier
+            && propertyAccessExpression.name.kind === ts.SyntaxKind.Identifier) {
             let expressionIdentifier = <ts.Identifier>(propertyAccessExpression.expression);
             let nameIdentifier = <ts.Identifier>(propertyAccessExpression.name);
             if (expressionIdentifier.text === 'angular' && nameIdentifier.text === 'module') {
