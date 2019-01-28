@@ -133,14 +133,6 @@ export function isAngularModulePropertyAccessExpression(expr: ts.Expression,
     }
 }
 
-function getCallExpressionIdentifier(expr: ts.Expression): string {
-    if (expr.kind === ts.SyntaxKind.Identifier) {
-        return (<ts.Identifier>expr).text;
-    }
-    return getCallExpressionIdentifier((<ts.CallExpression>expr).expression);
-}
-
-
 /**
  * returns first call expression from chain of call expressions
  * eg. angular.module().controller().directive().... => angular.module()

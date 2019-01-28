@@ -1,5 +1,6 @@
 import * as ts from 'typescript';
 import {
+    getFirstCallExpression,
     isAngularModuleBasedCallExpression,
     isAngularModuleCreationExpression,
     isAngularModulePropertyAccessExpression
@@ -179,11 +180,74 @@ describe('angularjsUtils', () => {
         ).toBeTruthy();
     });
 
+    test('check getFirstCallExpression', () => {
+        expect(
+            // angular.module(MODULE_NAME).directive('blub', blubFn)
+            getFirstCallExpression(getCallExpression(sourceFile.statements[2]))
+        ).toBe(
+            (((sourceFile.statements[2] as ts.ExpressionStatement)
+                .expression as ts.CallExpression)
+                .expression as ts.PropertyAccessExpression)
+                .expression
+        );
+        expect(
+            // angular.module(MODULE_NAME, [])
+            getFirstCallExpression(getCallExpression(sourceFile.statements[3]))
+        ).toBe(
+            (sourceFile.statements[3] as ts.ExpressionStatement)
+                .expression
+        );
+
+        expect(
+            // moduleAssignment.directive('call', callMe)
+            getFirstCallExpression(getCallExpression(sourceFile.statements[5]))
+        ).toBe(
+            (sourceFile.statements[5] as ts.ExpressionStatement)
+                .expression
+        );
+
+        expect(
+            // someMethodCall('argument1', 'argument2')
+            getFirstCallExpression(getCallExpression(sourceFile.statements[6]))
+        ).toBe(
+            (sourceFile.statements[6] as ts.ExpressionStatement)
+                .expression
+        );
+
+        expect(
+            // angular.module('testModule')
+            //             .directive('blub', blubFn);
+            getFirstCallExpression(getCallExpression(sourceFile.statements[7]))
+        ).toBe(
+            (((sourceFile.statements[7] as ts.ExpressionStatement)
+                .expression as ts.CallExpression)
+                .expression as ts.PropertyAccessExpression)
+                .expression
+        );
+
+        expect(
+            // angular.module('testModule', [])
+            //             .directive('blub', blubFn);
+            getFirstCallExpression(getCallExpression(sourceFile.statements[8]))
+        ).toBe(
+            (((sourceFile.statements[8] as ts.ExpressionStatement)
+                .expression as ts.CallExpression)
+                .expression as ts.PropertyAccessExpression)
+                .expression
+        );
+    });
+
     function createGetNgModuleForIdentifierSpy() {
         return jest.spyOn(MetaData.get(), "getNgModuleForIdentifier")
             .mockImplementation((expr) => {
                 return expr === 'moduleAssignment' ? 'testModule' : null;
             });
+    }
+
+    function getCallExpression(statement: ts.Statement): ts.CallExpression {
+        const expr = getCallOrPropertyAccessExpression(statement);
+        expect(expr.kind).toBe(ts.SyntaxKind.CallExpression);
+        return expr as ts.CallExpression;
     }
 
     function getCallOrPropertyAccessExpression(statement: ts.Statement): ts.CallExpression | ts.PropertyAccessExpression {
