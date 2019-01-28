@@ -1,6 +1,11 @@
 import * as ts from 'typescript';
 import * as utils from '../utils';
-import {getAngularDeclaration, getFirstCallExpression, getFirstCallExpressionIdentifier, isAngularExpression} from './angularjsUtils';
+import {
+    getAngularDeclaration,
+    getFirstCallExpression,
+    isAngularModuleBasedCallExpression,
+    isAngularModuleCreationExpression
+} from './angularjsUtils';
 import {addExportToNode} from './exporter';
 import {IAngularDeclaration, platformModuleNames} from '../model';
 import {MetaData} from '../metaData';
@@ -134,12 +139,12 @@ export function createModuleTransformer(replaceablePluginNames: string[]) {
 
                 if (initializer.kind === ts.SyntaxKind.CallExpression) {
                     let callExpression = ts.createExpressionStatement(initializer);
-                    if ('angular.module' === getFirstCallExpressionIdentifier(<ts.CallExpression>(callExpression.expression))) {
-                        const ngCallExpr = getFirstCallExpression(<ts.CallExpression>initializer);
-                        const moduleId = ngCallExpr.arguments[0];
+                    if (isAngularModuleCreationExpression(initializer)) {
+                        const angularModuleCall = getFirstCallExpression(<ts.CallExpression>initializer);
+                        const moduleId = angularModuleCall.arguments[0];
                         let moduleName = moduleId.getText();
                         if (moduleId.kind === ts.SyntaxKind.Identifier) {
-                            moduleName = getNgModuleNameFromIdentifier(<ts.Identifier>moduleId);
+                            moduleName = getNgModuleNameFromIdentifier(moduleId as ts.Identifier);
                         }
                         MetaData.get().addNgModuleIdentifier(moduleName, sf.fileName, tsModuleName, variableDeclaration.name.getText(), moduleId.getText());
                         ngDeclarations.push(getAngularDeclaration(callExpression, tsModuleName));
@@ -150,7 +155,8 @@ export function createModuleTransformer(replaceablePluginNames: string[]) {
                 const expression = (<ts.ExpressionStatement>node).expression;
                 if (expression.kind === ts.SyntaxKind.CallExpression) {
                     let callExpression = ts.createExpressionStatement(expression);
-                    if ('angular.module' === getFirstCallExpressionIdentifier(<ts.CallExpression>(callExpression.expression))) {
+                    // if ('angular.module' === getFirstCallExpressionIdentifier(<ts.CallExpression>(callExpression.expression))) {
+                    if (isAngularModuleCreationExpression(expression)) {
                         const moduleId = (<ts.CallExpression>expression).arguments[0];
                         let moduleName = moduleId.getText();
                         if (moduleId.kind === ts.SyntaxKind.Identifier) {
@@ -169,8 +175,9 @@ export function createModuleTransformer(replaceablePluginNames: string[]) {
         function extractAndRemoveAngularDeclarations(node: ts.Node) {
             let isModule = checkIfAngularModuleDeclaration(node);
             if (node.kind === ts.SyntaxKind.ExpressionStatement) {
-                if (isAngularExpression(<ts.ExpressionStatement>node)) {
-                    ngDeclarations.push(getAngularDeclaration((<ts.ExpressionStatement>node).expression as ts.CallExpression, tsModuleName));
+                const expr = node as ts.ExpressionStatement;
+                if (isAngularModuleBasedCallExpression(expr.expression)) {
+                    ngDeclarations.push(getAngularDeclaration(expr.expression as ts.CallExpression, tsModuleName));
                     return isModule ? node : undefined;
                 }
             }

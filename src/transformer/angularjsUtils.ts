@@ -3,26 +3,6 @@ import {IAngularDeclaration} from '../model';
 import {MetaData} from '../metaData';
 
 /**
- * angular expression should always start with
- * angular.module or a variable that was assigned angular.module declaration result
- *
- * angular.module().directive(...)
- * let MODULE = angular.module('my.angular.module', []);
- * MODULE.directive(...):
- *
- * @param node
- * @returns {boolean}
- */
-export function isAngularExpression(node: ts.ExpressionStatement): boolean {
-    if (node.expression.kind === ts.SyntaxKind.CallExpression) {
-        let identifier = getFirstCallExpressionIdentifier(<ts.CallExpression>(node.expression));
-        return identifier === 'angular';
-    }
-
-    return false;
-}
-
-/**
  * parses angular declarations of the form
  *      angular.module().controller().service().directive()
  *
@@ -76,38 +56,84 @@ export function getAngularDeclaration(node: ts.Node, tsModuleName: string): IAng
 }
 
 /**
- * determines the first identifier of a function call
+ * Checks if a given `CallExpression` is either directly rooted by an `angular.module(...)`
+ * call or sources from a variable that is known to contain an Angular module.
  *
- * the call can be of the form
- * 1. someMethod(...args) => someMethod
- * 2. prop.method1().prop2.method2().method3() => prop
- * 3. any combination of properties and methods but last part should be method call
+ * `angular.module().directive(...)` -> directly rooted
+ *
+ * ```
+ * let MODULE = angular.module('my.angular.module', []);
+ * MODULE.directive(...):
+ * ```
+ * Here `MODULE` is known to be assigned an Angular module.
  *
  * @param expr
- * @returns {string}
+ * @returns {boolean}
  */
-export function getFirstCallExpressionIdentifier(expr: ts.CallExpression): string {
-    if (expr.expression.kind === ts.SyntaxKind.PropertyAccessExpression
-        && expr.arguments && expr.arguments.length === 2) {
-        let propertyAccessExpression = <ts.PropertyAccessExpression>(expr.expression);
-        if (propertyAccessExpression.expression.kind === ts.SyntaxKind.Identifier
-            && propertyAccessExpression.name.kind === ts.SyntaxKind.Identifier) {
-            let expressionIdentifier = <ts.Identifier>(propertyAccessExpression.expression);
-            let nameIdentifier = <ts.Identifier>(propertyAccessExpression.name);
-            if (expressionIdentifier.text === 'angular' && nameIdentifier.text === 'module') {
-                return 'angular.module';
-            }
-            if (MetaData.get().getNgModuleForIdentifier(expressionIdentifier.text)) {
-                return 'angular';
-            }
-        } else {
-            return getFirstCallExpressionIdentifier(<ts.CallExpression>(propertyAccessExpression.expression));
-        }
+export function isAngularModuleBasedCallExpression(expr: ts.Expression): boolean {
+    if (expr.kind !== ts.SyntaxKind.CallExpression) {
+        return false;
     }
-    return getCallExpressionIdentifier(expr);
+    const call = expr as ts.CallExpression;
+    if (call.expression.kind === ts.SyntaxKind.PropertyAccessExpression) {
+        const propertyAccess = call.expression as ts.PropertyAccessExpression;
+        if (isAngularModulePropertyAccessExpression(propertyAccess, undefined, true)) {
+            return true;
+        } else {
+            return isAngularModuleBasedCallExpression(propertyAccess.expression);
+        }
+    } else {
+        return false;
+    }
 }
 
-function getCallExpressionIdentifier(expr: ts.Node): string {
+export function isAngularModuleCreationExpression(expr: ts.Expression): boolean {
+    if (expr.kind === ts.SyntaxKind.CallExpression) {
+        const call = expr as ts.CallExpression;
+        if (isAngularModulePropertyAccessExpression(call.expression, 'module')
+            && call.arguments.length === 2) {
+            return true;
+        } else {
+            return isAngularModuleCreationExpression(call.expression);
+        }
+    } else if (expr.kind === ts.SyntaxKind.PropertyAccessExpression) {
+        const property = expr as ts.PropertyAccessExpression;
+        const expression = property.expression;
+        if (expression.kind === ts.SyntaxKind.CallExpression) {
+            return isAngularModuleCreationExpression(expression);
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+
+export function isAngularModulePropertyAccessExpression(expr: ts.Expression,
+                                                        limitToFunction: string = undefined,
+                                                        checkForKnownModuleVariable = false): boolean {
+    if (expr.kind !== ts.SyntaxKind.PropertyAccessExpression) {
+        return false;
+    }
+
+    const property = expr as ts.PropertyAccessExpression;
+    const propertyExpression = property.expression;
+    if (!!limitToFunction && property.name.text !== limitToFunction) {
+        return false;
+    }
+    if (propertyExpression.kind !== ts.SyntaxKind.Identifier) {
+        return false;
+    }
+
+    if ((propertyExpression as ts.Identifier).text === 'angular') {
+        return true;
+    } else {
+        return checkForKnownModuleVariable
+            && !!MetaData.get().getNgModuleForIdentifier((propertyExpression as ts.Identifier).text);
+    }
+}
+
+function getCallExpressionIdentifier(expr: ts.Expression): string {
     if (expr.kind === ts.SyntaxKind.Identifier) {
         return (<ts.Identifier>expr).text;
     }
