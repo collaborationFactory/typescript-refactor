@@ -123,7 +123,7 @@ The general refactoring procedure to transform your TypeScript sources is as fol
 
 4. Also the following two changes need to be made to the repository's `.circleci/config.yml` file - 
 
-   1. Replace `command: nvm install 6.1 && nvm alias default 6.1` with `nvm install 8.11.2 && nvm alias default 8.11.2`
+   1. Replace `command: nvm install 6.1 && nvm alias default 6.1` with `command: nvm install 8.11.2 && nvm alias default 8.11.2`
    
    2.  Add `- run: npm install -g @cplace/asc`  just above the line `- run: npm install -g @cplace/cli`
 
