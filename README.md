@@ -121,25 +121,31 @@ The general refactoring procedure to transform your TypeScript sources is as fol
     ```
     If any plugins to be refactored already has tsconfig.json file, delete them. 
 
-4. Run `cplace-ts-refactor` (or on *nix better: `cplace-ts-refactor | tee refactor.log`). The old `ts` source files will be copied to `assets/ts-old` for later reference.
+4. Also the following two changes need to be made to the repository's `.circleci/config.yml` file - 
 
-5. See the generated output for `WARN` messages and the **Known Issues** listed below.
+   1. Replace `command: nvm install 6.1 && nvm alias default 6.1` with `command: nvm install 8.11.2 && nvm alias default 8.11.2`
+   
+   2.  Add `- run: npm install -g @cplace/asc`  just above the line `- run: npm install -g @cplace/cli`
 
-6. Open IntelliJ and in the Project View on the left for every plugin in your repository:
+5. Run `cplace-ts-refactor` (or on *nix better: `cplace-ts-refactor | tee refactor.log`). The old `ts` source files will be copied to `assets/ts-old` for later reference.
+
+6. See the generated output for `WARN` messages and the **Known Issues** listed below.
+
+7. Open IntelliJ and in the Project View on the left for every plugin in your repository:
     1. Select the plugin's `assets/ts` folder.
     2. Right-click the folder and select *Reformat Code*
     
-7. Fix any issues detected in step 4.
+8. Fix any issues detected in step 5.
 
-8. If your code uses old http promise API, refactor it to new Promise API. eg. <br> 
+9. If your code uses old http promise API, refactor it to new Promise API. eg. <br> 
 `this.$http.get(someUrl).success((data) => {}).error((data) => {}) ` will be refactored to <br> 
 `this.$http.get(someUrl).then((response: IHttpResponse<yourReturnType or any>) => {response.data...}, (response) => {})` <br>
 Notice that in new promise API data is not directly available, instead it is part of response object. 
 
-9. The refactor script might miss some angular declarations and will not add them to `app.ts` file. <br>
+10. The refactor script might miss some angular declarations and will not add them to `app.ts` file. <br>
     Just go through all directives/controllers/services etc and make sure they are declared in your `app.ts`  
 
-10. Make sure you have the new assets compiler installed (`cplace-asc`). Test the refactored changes by running `cplace-asc -c` and starting your cplace server.
+11. Make sure you have the new assets compiler installed (`cplace-asc`). Test the refactored changes by running `cplace-asc -c` and starting your cplace server.
 
 ## Known Issues
 
