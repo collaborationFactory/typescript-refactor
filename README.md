@@ -156,6 +156,23 @@ The following aspects **must** be cleaned up manually afterwards:
 - If you use `lang.message` or `lang.parameterizedMessage` in your files you have to remove `lang.` and import the `message`/`parameterizedMessage` functions directly
 - If you use `angular.module(...).config(...)` or `angular.module(...).run(...)` must add those functions again after refactoring
 - If you use `angular.module(...).directive(DIRECTIVE, directiveFunctionRefernce)`, i.e. you use a constant to specify the directive name without properly exporting it as a unique name you have to replace `DIRECTIVE` with the proper value
+- Check all `import` statements at the top of all TypeScript source files and make sure that
+    - There are no relative imports pointing to outside your plugin, i.e. assume that your plugin is called `cf.cplace.myPlugin`. A *false* import may look like this:
+        ```typescript
+        import {...} from '../../../../main/cf.cplace.platform/assets/generated_js/services/PostHeadersService';
+        ```
+        This needs to be changed that any references to other plugins are replace with `@pluginName` and do not point to the generated sources but the TypeScript assets:
+        ```typescript
+        import {...} from '@cf.cplace.platform/services/PostHeadersService';
+        ```
+    - TypeScript source files from the current plugin *must use a relative prefix*, i.e. the following is invalid: 
+        ```typescript
+        import { GraphCtrl } from 'GraphCtrl';
+        ```
+        And must be replace with a relative prefix:
+        ```typescript
+        import { GraphCtrl } from './GraphCtrl';
+        ```
 
 ## Usage
 
